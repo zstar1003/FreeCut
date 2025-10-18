@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui">
+  <ribbon>
+    <tabs>
+      <tab id="FreeCutTab" label="FreeCut">
+        <group id="FreeCutMainGroup" label="PDF导出">
+          <button id="FreeCutSettingsButton"
+                  label="FreeCut设置"
+                  size="large"
+                  imageMso="FileExportMenu"
+                  onAction="OnFreeCutSettings"
+                  screentip="打开FreeCut设置面板"
+                  supertip="配置裁剪边距、PDF质量等导出参数。&#10;&#10;您可以设置：&#10;• 自动检测内容边界&#10;• 自定义边距设置&#10;• PDF质量和DPI&#10;• 背景检测模式" />
+
+          <button id="QuickExportButton"
+                  label="导出PDF"
+                  size="large"
+                  imageMso="ExportPDF"
+                  onAction="OnExportPDF"
+                  screentip="快速导出PDF"
+                  supertip="使用当前设置导出选中的幻灯片为PDF文件。&#10;&#10;如果没有选中幻灯片，将提示您选择要导出的页面。" />
+        </group>
+
+        <group id="FreeCutToolsGroup" label="工具">
+          <button id="PreviewButton"
+                  label="预览裁剪"
+                  size="normal"
+                  imageMso="PrintPreview"
+                  onAction="OnPreviewCrop"
+                  screentip="预览裁剪效果"
+                  supertip="预览应用当前设置后的裁剪效果，确认无误后再进行导出。" />
+
+          <button id="RefreshSettingsButton"
+                  label="重新加载设置"
+                  size="normal"
+                  imageMso="Refresh"
+                  onAction="OnRefreshSettings"
+                  screentip="重新加载设置"
+                  supertip="重新加载保存的设置配置。" />
+        </group>
+
+        <group id="FreeCutHelpGroup" label="帮助">
+          <button id="AboutButton"
+                  label="关于"
+                  size="normal"
+                  imageMso="Info"
+                  onAction="OnAbout"
+                  screentip="关于FreeCut"
+                  supertip="查看FreeCut版本信息和使用说明。" />
+        </group>
+      </tab>
+    </tabs>
+  </ribbon>
+</customUI>
