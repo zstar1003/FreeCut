@@ -156,8 +156,21 @@ namespace PowerPointAddIn1
 
             try
             {
-                // 导出幻灯片为临时图片（较低DPI以提高速度）
-                slide.Export(tempImagePath, "PNG", 150, 150);
+                // 获取幻灯片尺寸（单位：磅 points, 1磅 = 1/72英寸）
+                float slideWidthInPoints = slide.Parent.PageSetup.SlideWidth;
+                float slideHeightInPoints = slide.Parent.PageSetup.SlideHeight;
+
+                // 转换为英寸
+                float slideWidthInInches = slideWidthInPoints / 72f;
+                float slideHeightInInches = slideHeightInPoints / 72f;
+
+                // 预览使用较低DPI以提高速度（150 DPI）
+                int previewDpi = 150;
+                int exportWidth = (int)Math.Round(slideWidthInInches * previewDpi);
+                int exportHeight = (int)Math.Round(slideHeightInInches * previewDpi);
+
+                // 导出幻灯片为临时图片
+                slide.Export(tempImagePath, "PNG", exportWidth, exportHeight);
 
                 // 加载并处理图片
                 using (var originalImage = Image.FromFile(tempImagePath))

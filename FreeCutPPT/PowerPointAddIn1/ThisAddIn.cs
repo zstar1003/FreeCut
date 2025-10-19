@@ -79,12 +79,26 @@ namespace PowerPointAddIn1
         /// <summary>
         /// 导出幻灯片为图片
         /// </summary>
-        public string ExportSlideToImage(dynamic slide, string outputPath, int dpi = 300)
+        public string ExportSlideToImage(dynamic slide, string outputPath, int dpi = 600)
         {
             try
             {
                 PowerPoint.Slide pptSlide = (PowerPoint.Slide)slide;
-                pptSlide.Export(outputPath, "PNG", dpi, dpi);
+
+                // 获取幻灯片尺寸（单位：磅 points, 1磅 = 1/72英寸）
+                float slideWidthInPoints = pptSlide.Parent.PageSetup.SlideWidth;
+                float slideHeightInPoints = pptSlide.Parent.PageSetup.SlideHeight;
+
+                // 转换为英寸
+                float slideWidthInInches = slideWidthInPoints / 72f;
+                float slideHeightInInches = slideHeightInPoints / 72f;
+
+                // 根据DPI计算像素尺寸
+                int exportWidth = (int)Math.Round(slideWidthInInches * dpi);
+                int exportHeight = (int)Math.Round(slideHeightInInches * dpi);
+
+                // 导出为图片
+                pptSlide.Export(outputPath, "PNG", exportWidth, exportHeight);
                 return outputPath;
             }
             catch (Exception ex)

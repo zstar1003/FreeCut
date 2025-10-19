@@ -31,6 +31,11 @@ namespace PowerPointAddIn1
             if (slides == null || slides.Count == 0)
                 throw new ArgumentException("幻灯片列表不能为空", nameof(slides));
 
+            System.Diagnostics.Debug.WriteLine($"========== 开始导出 {slides.Count} 张幻灯片 ==========");
+            System.Diagnostics.Debug.WriteLine($"导出DPI: {settings.ExportDpi}");
+            System.Diagnostics.Debug.WriteLine($"自动检测边界: {settings.AutoDetectBounds}");
+            System.Diagnostics.Debug.WriteLine($"边距: 上{settings.TopMargin} 下{settings.BottomMargin} 左{settings.LeftMargin} 右{settings.RightMargin}");
+
             progressCallback?.Invoke(0, "初始化PDF导出...");
 
             try
@@ -94,14 +99,33 @@ namespace PowerPointAddIn1
 
             try
             {
-                // 使用PowerPoint导出幻灯片为图片
-                slide.Export(tempImagePath, "PNG", settings.ExportDpi, settings.ExportDpi);
+                // 获取幻灯片尺寸（单位：磅 points, 1磅 = 1/72英寸）
+                float slideWidthInPoints = slide.Parent.PageSetup.SlideWidth;
+                float slideHeightInPoints = slide.Parent.PageSetup.SlideHeight;
+
+                // 转换为英寸
+                float slideWidthInInches = slideWidthInPoints / 72f;
+                float slideHeightInInches = slideHeightInPoints / 72f;
+
+                // 根据DPI计算像素尺寸
+                int exportWidth = (int)Math.Round(slideWidthInInches * settings.ExportDpi);
+                int exportHeight = (int)Math.Round(slideHeightInInches * settings.ExportDpi);
+
+                System.Diagnostics.Debug.WriteLine($"处理幻灯片 {slideNumber}:");
+                System.Diagnostics.Debug.WriteLine($"  幻灯片尺寸: {slideWidthInPoints:F1} x {slideHeightInPoints:F1} 磅 = {slideWidthInInches:F2}\" x {slideHeightInInches:F2}\"");
+                System.Diagnostics.Debug.WriteLine($"  导出尺寸: {exportWidth} x {exportHeight} 像素 @ {settings.ExportDpi} DPI");
+
+                // 使用PowerPoint导出幻灯片为图片（指定像素尺寸）
+                slide.Export(tempImagePath, "PNG", exportWidth, exportHeight);
 
                 // 处理图片
                 using (var originalImage = System.Drawing.Image.FromFile(tempImagePath))
                 {
+                    System.Diagnostics.Debug.WriteLine($"  导出后实际尺寸: {originalImage.Width}x{originalImage.Height}");
+
                     var croppedImage = CropImage(originalImage);
-                    System.Diagnostics.Debug.WriteLine($"已处理幻灯片 {slideNumber}");
+
+                    System.Diagnostics.Debug.WriteLine($"  最终尺寸: {croppedImage.Width}x{croppedImage.Height}");
                     return croppedImage;
                 }
             }
@@ -123,6 +147,8 @@ namespace PowerPointAddIn1
             this.outputFilePath = outputPath;
             this.currentPageIndex = 0;
 
+            System.Diagnostics.Debug.WriteLine($"========== 开始打印PDF: 共{imagesToPrint.Count}页 ==========");
+
             using (var printDocument = new PrintDocument())
             {
                 // 设置打印机为Microsoft Print to PDF
@@ -130,16 +156,38 @@ namespace PowerPointAddIn1
                 printDocument.PrinterSettings.PrintToFile = true;
                 printDocument.PrinterSettings.PrintFileName = outputPath;
 
-                // 绑定事件 - QueryPageSettings在PrintPage之前调用
+                // 为第一页设置默认纸张大小
+                if (imagesToPrint.Count > 0)
+                {
+                    var firstImage = imagesToPrint[0];
+                    double dpi = settings.ExportDpi;
+
+                    // 计算纸张尺寸（1/100英寸）
+                    int paperWidth = (int)Math.Round(firstImage.Width / dpi * 100);
+                    int paperHeight = (int)Math.Round(firstImage.Height / dpi * 100);
+
+                    // 确保横向页面：PaperSize的第一个参数（宽度）应该是较大的值
+                    // 如果图片是横向的（宽>高），直接使用
+                    // PaperSize会自动处理方向
+                    var paperSize = new PaperSize("PPTSlide", paperWidth, paperHeight);
+                    printDocument.DefaultPageSettings.PaperSize = paperSize;
+                    printDocument.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+
+                    // 明确设置为横向或纵向
+                    printDocument.DefaultPageSettings.Landscape = (firstImage.Width > firstImage.Height);
+
+                    System.Diagnostics.Debug.WriteLine($"默认页面设置（第一页）: 纸张={paperWidth/100.0}\"x{paperHeight/100.0}\" ({firstImage.Width}px x {firstImage.Height}px @ {dpi} DPI)");
+                    System.Diagnostics.Debug.WriteLine($"  Landscape={printDocument.DefaultPageSettings.Landscape}, 图片比例={firstImage.Width}:{firstImage.Height}");
+                }
+
+                // 绑定事件 - QueryPageSettings在PrintPage之前调用（从第二页开始）
                 printDocument.QueryPageSettings += PrintDocument_QueryPageSettings;
                 printDocument.PrintPage += PrintDocument_PrintPage;
-
-                // 初始页面设置
-                printDocument.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
 
                 try
                 {
                     printDocument.Print();
+                    System.Diagnostics.Debug.WriteLine($"========== PDF打印完成 ==========");
                 }
                 catch (Exception ex)
                 {
@@ -149,13 +197,16 @@ namespace PowerPointAddIn1
         }
 
         /// <summary>
-        /// 查询页面设置事件 - 在每页打印前调用
+        /// 查询页面设置事件 - 在每页打印前调用（从第二页开始）
         /// </summary>
         private void PrintDocument_QueryPageSettings(object sender, QueryPageSettingsEventArgs e)
         {
-            if (currentPageIndex < imagesToPrint.Count)
+            // currentPageIndex在PrintPage中递增，所以这里看到的是下一页的索引
+            int nextPageIndex = currentPageIndex;
+
+            if (nextPageIndex < imagesToPrint.Count)
             {
-                var image = imagesToPrint[currentPageIndex];
+                var image = imagesToPrint[nextPageIndex];
 
                 // 计算页面尺寸（单位：1/100英寸）
                 double dpi = settings.ExportDpi;
@@ -165,9 +216,12 @@ namespace PowerPointAddIn1
                 // 设置页面大小
                 e.PageSettings.PaperSize = new PaperSize("PPTSlide", paperWidth, paperHeight);
                 e.PageSettings.Margins = new Margins(0, 0, 0, 0);
-                e.PageSettings.Landscape = false;
 
-                System.Diagnostics.Debug.WriteLine($"QueryPageSettings 页面 {currentPageIndex + 1}: 纸张={paperWidth/100.0}\"x{paperHeight/100.0}\" ({image.Width}px x {image.Height}px @ {dpi} DPI)");
+                // 设置横向或纵向
+                e.PageSettings.Landscape = (image.Width > image.Height);
+
+                System.Diagnostics.Debug.WriteLine($"QueryPageSettings 页面 {nextPageIndex + 1}: 纸张={paperWidth/100.0}\"x{paperHeight/100.0}\" ({image.Width}px x {image.Height}px @ {dpi} DPI)");
+                System.Diagnostics.Debug.WriteLine($"  Landscape={e.PageSettings.Landscape}");
             }
         }
 
@@ -187,14 +241,28 @@ namespace PowerPointAddIn1
                 graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
                 graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
 
-                // 获取页面尺寸
-                var pageWidth = e.PageBounds.Width;
-                var pageHeight = e.PageBounds.Height;
+                // 获取页面尺寸（单位是1/100英寸）
+                var pageBoundsWidth = e.PageBounds.Width;
+                var pageBoundsHeight = e.PageBounds.Height;
 
-                System.Diagnostics.Debug.WriteLine($"PrintPage 页面 {currentPageIndex + 1}: 页面区域={pageWidth}x{pageHeight}, 图片={image.Width}x{image.Height}");
+                // Graphics的DPI
+                float graphicsDpiX = graphics.DpiX;
+                float graphicsDpiY = graphics.DpiY;
 
-                // 填满整个页面绘制图片
-                graphics.DrawImage(image, 0, 0, pageWidth, pageHeight);
+                // 计算绘制区域（Graphics坐标单位）
+                // PageBounds是1/100英寸，需要转换为Graphics坐标
+                float drawWidth = pageBoundsWidth * graphicsDpiX / 100f;
+                float drawHeight = pageBoundsHeight * graphicsDpiY / 100f;
+
+                System.Diagnostics.Debug.WriteLine($"PrintPage 页面 {currentPageIndex + 1}:");
+                System.Diagnostics.Debug.WriteLine($"  PageBounds={pageBoundsWidth}x{pageBoundsHeight} (1/100英寸)");
+                System.Diagnostics.Debug.WriteLine($"  GraphicsDPI={graphicsDpiX}x{graphicsDpiY}");
+                System.Diagnostics.Debug.WriteLine($"  绘制尺寸={drawWidth}x{drawHeight} (Graphics单位)");
+                System.Diagnostics.Debug.WriteLine($"  图片尺寸={image.Width}x{image.Height} (像素)");
+                System.Diagnostics.Debug.WriteLine($"  Landscape={e.PageSettings.Landscape}");
+
+                // 使用计算出的绘制尺寸，填满整个页面
+                graphics.DrawImage(image, 0, 0, drawWidth, drawHeight);
 
                 currentPageIndex++;
 
@@ -227,14 +295,22 @@ namespace PowerPointAddIn1
         /// </summary>
         private System.Drawing.Image CropImage(System.Drawing.Image originalImage)
         {
+            System.Diagnostics.Debug.WriteLine($"  裁剪前尺寸: {originalImage.Width}x{originalImage.Height}");
+
+            System.Drawing.Image result;
             if (settings.AutoDetectBounds)
             {
-                return CropImageWithAutoDetection(originalImage);
+                System.Diagnostics.Debug.WriteLine($"  使用自动检测边界");
+                result = CropImageWithAutoDetection(originalImage);
             }
             else
             {
-                return CropImageWithFixedMargins(originalImage);
+                System.Diagnostics.Debug.WriteLine($"  使用固定边距裁剪");
+                result = CropImageWithFixedMargins(originalImage);
             }
+
+            System.Diagnostics.Debug.WriteLine($"  裁剪后尺寸: {result.Width}x{result.Height}");
+            return result;
         }
 
         /// <summary>
@@ -247,6 +323,8 @@ namespace PowerPointAddIn1
                 // 检测内容边界
                 var contentBounds = DetectContentBounds(bitmap);
 
+                System.Diagnostics.Debug.WriteLine($"  检测到内容边界: Left={contentBounds.Left}, Top={contentBounds.Top}, Width={contentBounds.Width}, Height={contentBounds.Height}");
+
                 // 应用边距
                 var cropRect = new Rectangle(
                     Math.Max(0, contentBounds.Left - settings.LeftMargin),
@@ -256,6 +334,8 @@ namespace PowerPointAddIn1
                     Math.Min(bitmap.Height - Math.Max(0, contentBounds.Top - settings.TopMargin),
                             contentBounds.Height + settings.TopMargin + settings.BottomMargin)
                 );
+
+                System.Diagnostics.Debug.WriteLine($"  应用边距后裁剪区域: {cropRect}");
 
                 return CropBitmap(bitmap, cropRect);
             }
