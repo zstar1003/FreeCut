@@ -80,10 +80,10 @@ namespace FreeCut
         private void SetupEventHandlers()
         {
             // 边距控件事件
-            numTopMargin.ValueChanged += MarginChanged;
-            numBottomMargin.ValueChanged += MarginChanged;
-            numLeftMargin.ValueChanged += MarginChanged;
-            numRightMargin.ValueChanged += MarginChanged;
+            numTopMargin.ValueChanged += OnMarginValueChanged;
+            numBottomMargin.ValueChanged += OnMarginValueChanged;
+            numLeftMargin.ValueChanged += OnMarginValueChanged;
+            numRightMargin.ValueChanged += OnMarginValueChanged;
 
             // 自动检测事件
             chkAutoDetect.CheckedChanged += AutoDetectChanged;
@@ -104,7 +104,7 @@ namespace FreeCut
             btnSetAllMargins.Click += BtnSetAllMargins_Click;
         }
 
-        private void MarginChanged(object sender, EventArgs e)
+        private void OnMarginValueChanged(object sender, EventArgs e)
         {
             // 更新对称边距按钮状态
             bool allSame = numTopMargin.Value == numBottomMargin.Value &&

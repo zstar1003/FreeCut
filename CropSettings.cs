@@ -1,6 +1,7 @@
 using System;
 using System.IO;
-using Newtonsoft.Json;
+using System.Xml.Serialization;
+// using Newtonsoft.Json;
 
 namespace FreeCut
 {
@@ -82,8 +83,11 @@ namespace FreeCut
                     Directory.CreateDirectory(directory);
                 }
 
-                var json = JsonConvert.SerializeObject(this, Formatting.Indented);
-                File.WriteAllText(SettingsPath, json);
+                var serializer = new XmlSerializer(typeof(CropSettings));
+                using (var writer = new StreamWriter(SettingsPath))
+                {
+                    serializer.Serialize(writer, this);
+                }
             }
             catch (Exception ex)
             {
@@ -101,9 +105,12 @@ namespace FreeCut
             {
                 if (File.Exists(SettingsPath))
                 {
-                    var json = File.ReadAllText(SettingsPath);
-                    var settings = JsonConvert.DeserializeObject<CropSettings>(json);
-                    return settings ?? new CropSettings();
+                    var serializer = new XmlSerializer(typeof(CropSettings));
+                    using (var reader = new StreamReader(SettingsPath))
+                    {
+                        var settings = (CropSettings)serializer.Deserialize(reader);
+                        return settings ?? new CropSettings();
+                    }
                 }
             }
             catch (Exception ex)

@@ -2,71 +2,94 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Drawing.Printing;
 using System.IO;
-using iTextSharp.text;
-using iTextSharp.text.pdf;
 
 namespace FreeCut
 {
     /// <summary>
-    /// PDF导出器
+    /// PDF导出器 - 使用Windows内置PDF功能导出真正的PDF文档
     /// </summary>
     public class PdfExporter
     {
         private readonly CropSettings settings;
+        private List<System.Drawing.Image> imagesToPrint;
+        private int currentPageIndex;
+        private string outputFilePath;
 
         public PdfExporter(CropSettings settings)
         {
             this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            this.imagesToPrint = new List<System.Drawing.Image>();
         }
 
         /// <summary>
-        /// 导出幻灯片为PDF
+        /// 导出幻灯片为PDF文档
         /// </summary>
         public void ExportToPdf(List<dynamic> slides, string outputPath, Action<int, string> progressCallback = null)
         {
             if (slides == null || slides.Count == 0)
                 throw new ArgumentException("幻灯片列表不能为空", nameof(slides));
 
-            progressCallback?.Invoke(0, "初始化PDF文档...");
+            progressCallback?.Invoke(0, "初始化PDF导出...");
 
-            using (var document = new Document())
+            try
             {
-                using (var fileStream = new FileStream(outputPath, FileMode.Create))
+                // 清理之前的图片
+                ClearImages();
+
+                // 处理所有幻灯片为图片
+                for (int i = 0; i < slides.Count; i++)
                 {
-                    var writer = PdfWriter.GetInstance(document, fileStream);
-                    document.Open();
+                    var slide = slides[i];
+                    var progress = (int)((float)(i + 1) / slides.Count * 80); // 80% for processing
+                    progressCallback?.Invoke(progress, $"正在处理第 {i + 1}/{slides.Count} 张幻灯片...");
 
-                    for (int i = 0; i < slides.Count; i++)
+                    try
                     {
-                        var slide = slides[i];
-                        var progress = (int)((float)(i + 1) / slides.Count * 100);
-                        progressCallback?.Invoke(progress, $"正在处理第 {i + 1}/{slides.Count} 张幻灯片...");
-
-                        try
+                        var processedImage = ProcessSlideToImage(slide, i + 1);
+                        if (processedImage != null)
                         {
-                            ProcessSlide(document, slide, i + 1);
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"处理第 {i + 1} 张幻灯片失败: {ex.Message}");
-                            // 继续处理其他幻灯片
+                            imagesToPrint.Add(processedImage);
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"处理第 {i + 1} 张幻灯片失败: {ex.Message}");
+                        // 继续处理其他幻灯片
+                    }
+                }
 
-                    document.Close();
+                if (imagesToPrint.Count > 0)
+                {
+                    progressCallback?.Invoke(85, "正在生成PDF文档...");
+
+                    // 使用Windows打印功能导出为PDF
+                    PrintToPdf(outputPath);
+
+                    progressCallback?.Invoke(100, "PDF导出完成");
+                }
+                else
+                {
+                    throw new InvalidOperationException("没有成功处理任何幻灯片");
                 }
             }
-
-            progressCallback?.Invoke(100, "PDF导出完成");
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"PDF导出失败: {ex.Message}", ex);
+            }
+            finally
+            {
+                // 清理图片资源
+                ClearImages();
+            }
         }
 
         /// <summary>
-        /// 处理单张幻灯片
+        /// 处理单张幻灯片为图片并返回处理后的图片
         /// </summary>
-        private void ProcessSlide(Document document, dynamic slide, int slideNumber)
+        private System.Drawing.Image ProcessSlideToImage(dynamic slide, int slideNumber)
         {
-            // 导出幻灯片为图片
             string tempImagePath = Path.Combine(Path.GetTempPath(), $"FreeCut_Slide_{slideNumber}_{Guid.NewGuid()}.png");
 
             try
@@ -78,9 +101,8 @@ namespace FreeCut
                 using (var originalImage = System.Drawing.Image.FromFile(tempImagePath))
                 {
                     var croppedImage = CropImage(originalImage);
-
-                    // 将处理后的图片添加到PDF
-                    AddImageToPdf(document, croppedImage);
+                    System.Diagnostics.Debug.WriteLine($"已处理幻灯片 {slideNumber}");
+                    return croppedImage;
                 }
             }
             finally
@@ -90,6 +112,107 @@ namespace FreeCut
                 {
                     File.Delete(tempImagePath);
                 }
+            }
+        }
+
+        /// <summary>
+        /// 使用Windows打印功能将图片列表导出为PDF
+        /// </summary>
+        private void PrintToPdf(string outputPath)
+        {
+            this.outputFilePath = outputPath;
+            this.currentPageIndex = 0;
+
+            using (var printDocument = new PrintDocument())
+            {
+                // 设置打印机为Microsoft Print to PDF
+                printDocument.PrinterSettings.PrinterName = "Microsoft Print to PDF";
+                printDocument.PrinterSettings.PrintToFile = true;
+                printDocument.PrinterSettings.PrintFileName = outputPath;
+
+                // 设置页面设置
+                printDocument.DefaultPageSettings.PaperSize = new PaperSize("A4", 827, 1169); // A4 in 1/100 inch
+                printDocument.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0); // 无边距
+
+                // 绑定打印事件
+                printDocument.PrintPage += PrintDocument_PrintPage;
+
+                try
+                {
+                    printDocument.Print();
+                }
+                catch (Exception ex)
+                {
+                    throw new InvalidOperationException($"PDF打印失败: {ex.Message}. 请确保已安装Microsoft Print to PDF驱动程序。", ex);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 打印页面事件处理
+        /// </summary>
+        private void PrintDocument_PrintPage(object sender, PrintPageEventArgs e)
+        {
+            if (currentPageIndex < imagesToPrint.Count)
+            {
+                var image = imagesToPrint[currentPageIndex];
+                var graphics = e.Graphics;
+
+                // 计算页面尺寸
+                var pageWidth = e.PageBounds.Width;
+                var pageHeight = e.PageBounds.Height;
+                var margin = 20; // 边距
+
+                var availableWidth = pageWidth - 2 * margin;
+                var availableHeight = pageHeight - 2 * margin;
+
+                // 计算图片缩放比例
+                var scaleX = (float)availableWidth / image.Width;
+                var scaleY = (float)availableHeight / image.Height;
+
+                float scale;
+                if (settings.PreserveAspectRatio)
+                {
+                    scale = Math.Min(scaleX, scaleY);
+                }
+                else
+                {
+                    scale = Math.Min(scaleX, scaleY); // 确保图片不会超出页面
+                }
+
+                var scaledWidth = (int)(image.Width * scale);
+                var scaledHeight = (int)(image.Height * scale);
+
+                // 计算居中位置
+                var x = (pageWidth - scaledWidth) / 2;
+                var y = (pageHeight - scaledHeight) / 2;
+
+                // 绘制图片
+                graphics.DrawImage(image, x, y, scaledWidth, scaledHeight);
+
+                currentPageIndex++;
+
+                // 检查是否还有更多页面
+                e.HasMorePages = currentPageIndex < imagesToPrint.Count;
+            }
+            else
+            {
+                e.HasMorePages = false;
+            }
+        }
+
+        /// <summary>
+        /// 清理图片资源
+        /// </summary>
+        private void ClearImages()
+        {
+            if (imagesToPrint != null)
+            {
+                foreach (var image in imagesToPrint)
+                {
+                    image?.Dispose();
+                }
+                imagesToPrint.Clear();
             }
         }
 
@@ -119,7 +242,7 @@ namespace FreeCut
                 var contentBounds = DetectContentBounds(bitmap);
 
                 // 应用边距
-                var cropRect = new System.Drawing.Rectangle(
+                var cropRect = new Rectangle(
                     Math.Max(0, contentBounds.Left - settings.LeftMargin),
                     Math.Max(0, contentBounds.Top - settings.TopMargin),
                     Math.Min(bitmap.Width - Math.Max(0, contentBounds.Left - settings.LeftMargin),
@@ -137,7 +260,7 @@ namespace FreeCut
         /// </summary>
         private System.Drawing.Image CropImageWithFixedMargins(System.Drawing.Image originalImage)
         {
-            var cropRect = new System.Drawing.Rectangle(
+            var cropRect = new Rectangle(
                 settings.LeftMargin,
                 settings.TopMargin,
                 originalImage.Width - settings.LeftMargin - settings.RightMargin,
@@ -153,7 +276,7 @@ namespace FreeCut
         /// <summary>
         /// 检测内容边界
         /// </summary>
-        private System.Drawing.Rectangle DetectContentBounds(Bitmap bitmap)
+        private Rectangle DetectContentBounds(Bitmap bitmap)
         {
             // 获取背景色
             Color backgroundColor = GetBackgroundColor(bitmap);
@@ -184,10 +307,10 @@ namespace FreeCut
             // 如果没有找到内容，返回整个图片
             if (left >= right || top >= bottom)
             {
-                return new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height);
+                return new Rectangle(0, 0, bitmap.Width, bitmap.Height);
             }
 
-            return new System.Drawing.Rectangle(left, top, right - left + 1, bottom - top + 1);
+            return new Rectangle(left, top, right - left + 1, bottom - top + 1);
         }
 
         /// <summary>
@@ -243,11 +366,11 @@ namespace FreeCut
         /// <summary>
         /// 裁剪位图
         /// </summary>
-        private System.Drawing.Image CropBitmap(Bitmap source, System.Drawing.Rectangle cropRect)
+        private System.Drawing.Image CropBitmap(Bitmap source, Rectangle cropRect)
         {
             // 确保裁剪区域在图片范围内
-            cropRect = System.Drawing.Rectangle.Intersect(cropRect,
-                new System.Drawing.Rectangle(0, 0, source.Width, source.Height));
+            cropRect = Rectangle.Intersect(cropRect,
+                new Rectangle(0, 0, source.Width, source.Height));
 
             if (cropRect.IsEmpty)
             {
@@ -265,52 +388,15 @@ namespace FreeCut
         }
 
         /// <summary>
-        /// 将图片添加到PDF文档
-        /// </summary>
-        private void AddImageToPdf(Document document, System.Drawing.Image image)
-        {
-            // 将System.Drawing.Image转换为iTextSharp.text.Image
-            using (var memoryStream = new MemoryStream())
-            {
-                image.Save(memoryStream, ImageFormat.Png);
-                memoryStream.Position = 0;
-
-                var iTextImage = iTextSharp.text.Image.GetInstance(memoryStream.ToArray());
-
-                // 计算页面尺寸
-                float pageWidth = document.PageSize.Width - document.LeftMargin - document.RightMargin;
-                float pageHeight = document.PageSize.Height - document.TopMargin - document.BottomMargin;
-
-                // 缩放图片以适应页面
-                if (settings.PreserveAspectRatio)
-                {
-                    iTextImage.ScaleToFit(pageWidth, pageHeight);
-                }
-                else
-                {
-                    iTextImage.ScaleAbsolute(pageWidth, pageHeight);
-                }
-
-                // 居中显示
-                iTextImage.Alignment = iTextSharp.text.Image.ALIGN_CENTER;
-
-                // 添加新页面并插入图片
-                document.NewPage();
-                document.Add(iTextImage);
-            }
-        }
-
-        /// <summary>
-        /// 估算输出文件大小
+        /// 估算PDF输出文件大小
         /// </summary>
         public long EstimateOutputSize(List<dynamic> slides)
         {
-            // 简单估算：每页约50KB - 500KB，取决于DPI和质量
-            int baseSize = 50 * 1024; // 50KB base
+            // PDF文件大小估算：每页约100KB - 1MB，取决于DPI和图片质量
+            int baseSize = 100 * 1024; // 100KB base for PDF
             int dpiMultiplier = settings.ExportDpi / 150; // DPI倍数
-            int qualityMultiplier = settings.PdfQuality / 50; // 质量倍数
 
-            long estimatedSizePerPage = baseSize * dpiMultiplier * qualityMultiplier;
+            long estimatedSizePerPage = baseSize * dpiMultiplier;
             return estimatedSizePerPage * slides.Count;
         }
     }

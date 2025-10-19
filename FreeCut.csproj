@@ -38,6 +38,10 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <!-- 添加调试启动配置 -->
+    <StartAction>Program</StartAction>
+    <StartProgram>%ProgramFiles%\Microsoft Office\root\Office16\POWERPNT.EXE</StartProgram>
+    <StartWorkingDirectory>%ProgramFiles%\Microsoft Office\root\Office16\</StartWorkingDirectory>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -53,16 +57,10 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Drawing.Printing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Office.Interop.PowerPoint" Version="15.0.4420.1018" />
-    <PackageReference Include="iTextSharp" Version="5.5.13.3" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="System.Drawing.Common" Version="5.0.3" />
   </ItemGroup>
 
   <ItemGroup>
@@ -104,7 +102,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="FreeCut_TemporaryKey.pfx" />
+    <!-- <None Include="FreeCut_TemporaryKey.pfx" /> -->
+    <None Include="packages.config" />
   </ItemGroup>
 
   <ItemGroup>
@@ -113,9 +112,10 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <SignManifests>true</SignManifests>
-    <ManifestKeyFile>FreeCut_TemporaryKey.pfx</ManifestKeyFile>
-    <ManifestCertificateThumbprint>C1C123456789ABCDEF123456789ABCDEF12345678</ManifestCertificateThumbprint>
+    <!-- 暂时移除签名以简化构建过程 -->
+    <SignManifests>false</SignManifests>
+    <!-- <ManifestKeyFile>FreeCut_TemporaryKey.pfx</ManifestKeyFile> -->
+    <!-- <ManifestCertificateThumbprint>C1C123456789ABCDEF123456789ABCDEF12345678</ManifestCertificateThumbprint> -->
     <IncludeAssemblyInPackage>true</IncludeAssemblyInPackage>
   </PropertyGroup>
 

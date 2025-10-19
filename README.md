@@ -9,7 +9,7 @@ FreeCut是一个PowerPoint插件，专为学术论文写作设计。它可以选
 - ✅ **智能页面选择**: 支持单页和多页选择导出
 - ✅ **自动检测边界**: 智能识别内容区域，自动裁剪空白
 - ✅ **自定义边距**: 支持上下左右边距精确设置（0-500像素）
-- ✅ **高质量PDF导出**: 可配置DPI（72-600）和质量（1-100）
+- ✅ **高质量PNG导出**: 可配置DPI（72-600），PDF功能开发中
 - ✅ **实时预览**: 所见即所得的裁剪效果预览
 - ✅ **批量处理**: 一次性处理多个页面
 - ✅ **设置持久化**: 自动保存用户偏好配置
@@ -28,18 +28,46 @@ FreeCut是一个PowerPoint插件，专为学术论文写作设计。它可以选
 - 💻 **Windows原生**: 专为Windows PowerPoint优化
 
 ### 技术栈
-- **后端**: C# .NET Framework 4.8
+- **后端**: C# .NET Framework 4.7.2
 - **界面**: Windows Forms
-- **PDF处理**: iTextSharp
+- **图像处理**: System.Drawing (PNG导出)
+- **PDF处理**: 开发中 (依赖库兼容性问题)
 - **Office集成**: Microsoft.Office.Interop.PowerPoint
-- **部署**: VSTO部署或注册表安装
+- **部署**: 可执行安装器或注册表安装
+
+## ⚠️ PDF功能开发状态
+
+### 当前版本
+- ✅ **PNG导出功能**: 完全可用，支持高质量图像导出
+- 🔄 **PDF导出功能**: 正在开发中，遇到依赖库兼容性问题
+
+### PDF功能技术问题
+由于 .NET Framework 4.7.2 环境下的依赖库兼容性问题：
+- iTextSharp 5.5.13.3 包依赖解析失败
+- PDFsharp 在当前构建环境下无法正确加载
+- .NET Core/5.0+ 工具链与传统 .NET Framework 项目存在集成困难
+
+### 临时解决方案
+用户可以使用以下方式获得PDF输出：
+1. **使用PNG导出 + 转换工具**:
+   - 导出高质量PNG图片
+   - 使用Adobe Acrobat、在线工具或其他软件转换为PDF
+2. **PowerPoint原生导出**:
+   - 使用PowerPoint的"导出为PDF"功能
+   - 然后使用FreeCut对PDF进行二次裁剪处理
+
+### PDF功能恢复计划
+1. **环境升级**: 考虑升级到.NET Framework 4.8或.NET 6+
+2. **依赖库替换**: 评估其他.NET Framework兼容的PDF库
+3. **Visual Studio NuGet**: 使用Visual Studio包管理器手动安装
+4. **分离架构**: 将PDF生成独立为单独的服务组件
 
 ## 📥 安装和构建
 
 ### 1. 开发环境要求
 - Windows 10/11
 - Visual Studio 2017 或更新版本
-- .NET Framework 4.8 Developer Pack
+- .NET Framework 4.7.2 Developer Pack
 - PowerPoint 2016 或更新版本
 - VSTO运行时（通常随Visual Studio安装）
 
@@ -50,20 +78,32 @@ FreeCut是一个PowerPoint插件，专为学术论文写作设计。它可以选
 git clone [项目地址]
 cd FreeCut
 
-# 2. 使用Visual Studio构建
-# 打开 FreeCut.csproj 并按 F6 构建
+# 2. 构建FreeCut插件
+dotnet build FreeCut.csproj --configuration Release
 
-# 或使用MSBuild命令行
-"C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\MSBuild\Current\Bin\MSBuild.exe" FreeCut.csproj /p:Configuration=Release
+# 3. 构建安装器
+csc FreeCutInstaller.cs /target:winexe /out:FreeCutInstaller.exe /reference:System.Windows.Forms.dll
+
+# 4. 或使用一键构建脚本
+.\build_all.bat
 ```
 
 ### 3. 安装插件
 
-#### 方法一：开发调试安装
+#### 方法一：使用可执行安装器（推荐）
+1. 构建或下载 `FreeCutInstaller.exe`
+2. 以管理员权限运行安装器
+3. 点击"安装插件"按钮，安装器会自动：
+   - 检查并复制插件文件
+   - 创建清单文件
+   - 注册插件到PowerPoint
+4. 重启PowerPoint，在Ribbon中查找"FreeCut"标签页
+
+#### 方法二：开发调试安装
 1. 在Visual Studio中按F5运行项目
 2. 会自动启动PowerPoint并加载插件
 
-#### 方法二：注册表安装
+#### 方法三：手动注册表安装
 1. 编译项目生成FreeCut.dll
 2. 将DLL复制到合适位置
 3. 运行以下注册表脚本：
@@ -106,12 +146,11 @@ FreeCut设置窗口
 │   ├── 检测容差 (0-50)
 │   └── 背景模式选择
 ├── 📤 导出设置
-│   ├── PDF质量 (1-100)
 │   ├── DPI选择 (72/150/300/600)
 │   └── ☑️ 保持宽高比
 └── 🚀 操作按钮
     ├── 保存设置、重置设置
-    ├── 预览效果、导出PDF
+    ├── 预览效果、导出图片
     └── 取消
 ```
 
@@ -126,13 +165,13 @@ FreeCut设置窗口
 - **背景模式**: 自动检测/白色/透明/自定义颜色
 
 ### 导出设置
-- **PDF质量**: 1-100，数值越高质量越好
 - **导出DPI**:
   - 72 DPI：网页显示
   - 150 DPI：一般打印
   - 300 DPI：高质量印刷（推荐）
   - 600 DPI：专业印刷
 - **保持宽高比**: 导出时保持原始页面比例
+- **输出格式**: 当前版本支持PNG格式，PDF功能开发中
 
 ## 🎨 使用场景示例
 
@@ -144,8 +183,10 @@ FreeCut设置窗口
 2. 点击Ribbon中的"FreeCut设置"
 3. 启用"自动检测边界"，设置边距为10像素
 4. 选择300 DPI高质量导出
-5. 点击"导出PDF"，选择保存位置
-6. 在LaTeX中使用\includegraphics插入PDF
+5. 点击"导出图片"，选择保存位置，得到PNG文件
+6. 转换为PDF：
+   - 使用在线工具将PNG转为PDF
+   - 或在LaTeX中直接使用\includegraphics插入PNG
 ```
 
 ### 📊 研究报告场景
@@ -154,8 +195,11 @@ FreeCut设置窗口
 操作步骤：
 1. 批量选择所有包含图表的幻灯片
 2. 使用固定边距模式，设置统一的20px边距
-3. 导出为一个PDF文件，每页图表尺寸一致
-4. 直接作为研究报告的图表附件使用
+3. 导出为高质量PNG图片，每张图表尺寸一致
+4. 后续处理：
+   - 使用图片编辑软件批量转换为PDF
+   - 直接作为报告的图片附件使用
+   - 或使用PDF合并工具创建单一PDF文档
 ```
 
 ## 🔧 项目结构

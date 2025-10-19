@@ -152,7 +152,7 @@ namespace FreeCut
 
                 progressForm.Hide();
             }
-            catch (Exception ex)
+            catch
             {
                 progressForm?.Hide();
                 throw;

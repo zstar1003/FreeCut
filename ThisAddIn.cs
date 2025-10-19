@@ -25,6 +25,7 @@ namespace FreeCut
                 ribbon = new FreeCutRibbon();
 
                 System.Diagnostics.Debug.WriteLine("FreeCut插件已成功加载");
+                MessageBox.Show("FreeCut插件已成功加载！", "FreeCut", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
