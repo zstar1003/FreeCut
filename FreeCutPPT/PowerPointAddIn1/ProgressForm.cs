@@ -12,6 +12,25 @@ namespace PowerPointAddIn1
         {
             InitializeComponent();
             SetupForm();
+            EnhanceFormAppearance();
+        }
+
+        private void EnhanceFormAppearance()
+        {
+            // 设置窗体背景色
+            this.BackColor = System.Drawing.Color.FromArgb(240, 240, 240);
+
+            // 设置标题样式
+            lblTitle.ForeColor = System.Drawing.Color.FromArgb(0, 102, 204);
+
+            // 美化取消按钮
+            btnCancel.FlatStyle = FlatStyle.Flat;
+            btnCancel.BackColor = System.Drawing.Color.FromArgb(128, 128, 128);
+            btnCancel.ForeColor = System.Drawing.Color.White;
+            btnCancel.FlatAppearance.BorderSize = 0;
+
+            // 设置进度条样式（使用系统强调色）
+            progressBar.ForeColor = System.Drawing.Color.FromArgb(0, 120, 212);
         }
 
         private void SetupForm()

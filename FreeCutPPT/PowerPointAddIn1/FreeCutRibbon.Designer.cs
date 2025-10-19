@@ -73,7 +73,7 @@ namespace PowerPointAddIn1
             this.btnSettings.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
             this.btnSettings.Label = "FreeCut设置";
             this.btnSettings.Name = "btnSettings";
-            this.btnSettings.OfficeImageId = "FileExportMenu";
+            this.btnSettings.OfficeImageId = "PageSetupDialog";
             this.btnSettings.ShowImage = true;
             this.btnSettings.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnSettings_Click);
             //
@@ -82,7 +82,7 @@ namespace PowerPointAddIn1
             this.btnExportPDF.ControlSize = Microsoft.Office.Core.RibbonControlSize.RibbonControlSizeLarge;
             this.btnExportPDF.Label = "导出PDF";
             this.btnExportPDF.Name = "btnExportPDF";
-            this.btnExportPDF.OfficeImageId = "ExportPowerPoint";
+            this.btnExportPDF.OfficeImageId = "FileSaveAsPdf";
             this.btnExportPDF.ShowImage = true;
             this.btnExportPDF.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnExportPDF_Click);
             //
@@ -90,7 +90,7 @@ namespace PowerPointAddIn1
             //
             this.btnPreview.Label = "预览裁剪";
             this.btnPreview.Name = "btnPreview";
-            this.btnPreview.OfficeImageId = "PrintPreview";
+            this.btnPreview.OfficeImageId = "ZoomCurrent100";
             this.btnPreview.ShowImage = true;
             this.btnPreview.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnPreview_Click);
             //

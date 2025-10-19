@@ -13,8 +13,87 @@ namespace PowerPointAddIn1
         public SettingsForm()
         {
             InitializeComponent();
+            EnhanceFormAppearance();
             LoadSettings();
             SetupEventHandlers();
+        }
+
+        /// <summary>
+        /// 增强窗体外观
+        /// </summary>
+        private void EnhanceFormAppearance()
+        {
+            // 设置窗体背景色为浅灰色
+            this.BackColor = System.Drawing.Color.FromArgb(240, 240, 240);
+
+            // 设置标题样式
+            lblTitle.ForeColor = System.Drawing.Color.FromArgb(0, 102, 204);
+
+            // 设置分组框字体为粗体
+            grpMargins.Font = new System.Drawing.Font(grpMargins.Font, System.Drawing.FontStyle.Bold);
+            grpDetection.Font = new System.Drawing.Font(grpDetection.Font, System.Drawing.FontStyle.Bold);
+            grpExport.Font = new System.Drawing.Font(grpExport.Font, System.Drawing.FontStyle.Bold);
+            grpActions.Font = new System.Drawing.Font(grpActions.Font, System.Drawing.FontStyle.Bold);
+
+            // 恢复子控件字体为常规
+            foreach (var ctrl in grpMargins.Controls)
+            {
+                if (ctrl is System.Windows.Forms.Control control && !(control is System.Windows.Forms.GroupBox))
+                {
+                    control.Font = new System.Drawing.Font(this.Font, System.Drawing.FontStyle.Regular);
+                }
+            }
+            foreach (var ctrl in grpDetection.Controls)
+            {
+                if (ctrl is System.Windows.Forms.Control control && !(control is System.Windows.Forms.GroupBox))
+                {
+                    control.Font = new System.Drawing.Font(this.Font, System.Drawing.FontStyle.Regular);
+                }
+            }
+            foreach (var ctrl in grpExport.Controls)
+            {
+                if (ctrl is System.Windows.Forms.Control control && !(control is System.Windows.Forms.GroupBox))
+                {
+                    control.Font = new System.Drawing.Font(this.Font, System.Drawing.FontStyle.Regular);
+                }
+            }
+            foreach (var ctrl in grpActions.Controls)
+            {
+                if (ctrl is System.Windows.Forms.Control control && !(control is System.Windows.Forms.GroupBox))
+                {
+                    control.Font = new System.Drawing.Font(this.Font, System.Drawing.FontStyle.Regular);
+                }
+            }
+
+            // 美化按钮样式
+            btnSave.BackColor = System.Drawing.Color.FromArgb(0, 120, 212);
+            btnSave.ForeColor = System.Drawing.Color.White;
+            btnSave.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            btnSave.FlatAppearance.BorderSize = 0;
+
+            btnExport.BackColor = System.Drawing.Color.FromArgb(16, 124, 16);
+            btnExport.ForeColor = System.Drawing.Color.White;
+            btnExport.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            btnExport.FlatAppearance.BorderSize = 0;
+
+            btnPreview.BackColor = System.Drawing.Color.FromArgb(0, 99, 177);
+            btnPreview.ForeColor = System.Drawing.Color.White;
+            btnPreview.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            btnPreview.FlatAppearance.BorderSize = 0;
+
+            btnReset.BackColor = System.Drawing.Color.FromArgb(255, 140, 0);
+            btnReset.ForeColor = System.Drawing.Color.White;
+            btnReset.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            btnReset.FlatAppearance.BorderSize = 0;
+
+            btnCancel.BackColor = System.Drawing.Color.FromArgb(128, 128, 128);
+            btnCancel.ForeColor = System.Drawing.Color.White;
+            btnCancel.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            btnCancel.FlatAppearance.BorderSize = 0;
+
+            // 设置统一边距按钮样式
+            btnSetAllMargins.FlatStyle = System.Windows.Forms.FlatStyle.System;
+            btnCustomColor.FlatStyle = System.Windows.Forms.FlatStyle.System;
         }
 
         private void LoadSettings()

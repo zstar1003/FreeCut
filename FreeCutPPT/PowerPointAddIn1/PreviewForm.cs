@@ -20,7 +20,50 @@ namespace PowerPointAddIn1
         {
             InitializeComponent();
             SetupForm();
+            EnhanceFormAppearance();
             previewImages = new List<Image>();
+        }
+
+        /// <summary>
+        /// 增强窗体外观
+        /// </summary>
+        private void EnhanceFormAppearance()
+        {
+            // 设置窗体背景色
+            this.BackColor = System.Drawing.Color.FromArgb(240, 240, 240);
+
+            // 设置标题样式
+            lblTitle.ForeColor = System.Drawing.Color.FromArgb(0, 102, 204);
+
+            // 美化按钮
+            btnPrevious.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            btnPrevious.BackColor = System.Drawing.Color.FromArgb(0, 120, 212);
+            btnPrevious.ForeColor = System.Drawing.Color.White;
+            btnPrevious.FlatAppearance.BorderSize = 0;
+
+            btnNext.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            btnNext.BackColor = System.Drawing.Color.FromArgb(0, 120, 212);
+            btnNext.ForeColor = System.Drawing.Color.White;
+            btnNext.FlatAppearance.BorderSize = 0;
+
+            btnRefresh.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            btnRefresh.BackColor = System.Drawing.Color.FromArgb(0, 99, 177);
+            btnRefresh.ForeColor = System.Drawing.Color.White;
+            btnRefresh.FlatAppearance.BorderSize = 0;
+
+            btnExport.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            btnExport.BackColor = System.Drawing.Color.FromArgb(16, 124, 16);
+            btnExport.ForeColor = System.Drawing.Color.White;
+            btnExport.FlatAppearance.BorderSize = 0;
+
+            btnClose.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+            btnClose.BackColor = System.Drawing.Color.FromArgb(128, 128, 128);
+            btnClose.ForeColor = System.Drawing.Color.White;
+            btnClose.FlatAppearance.BorderSize = 0;
+
+            // 设置导航面板背景
+            panelNavigation.BackColor = System.Drawing.Color.White;
+            panelPreview.BackColor = System.Drawing.Color.White;
         }
 
         private void SetupForm()
