@@ -65,6 +65,7 @@
 
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="IDTExtensibility2.cs" />
     <Compile Include="ThisAddIn.cs" />
     <Compile Include="FreeCutRibbon.cs" />
     <Compile Include="CropSettings.cs" />
@@ -90,6 +91,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="ribbon.xml" />
     <EmbeddedResource Include="SettingsForm.resx">
       <DependentUpon>SettingsForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -107,8 +109,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="ribbon.xml" />
-    <Content Include="icon.ico" />
+    <None Include="icon.ico" />
   </ItemGroup>
 
   <PropertyGroup>

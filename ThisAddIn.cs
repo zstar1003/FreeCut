@@ -1,150 +1,83 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
+using Extensibility;
 
 namespace FreeCut
 {
     [ComVisible(true)]
     [Guid("12345678-1234-1234-1234-123456789ABC")]
     [ProgId("FreeCut.ThisAddIn")]
-    public partial class ThisAddIn
+    [ClassInterface(ClassInterfaceType.None)]
+    public class ThisAddIn : IDTExtensibility2, IRibbonExtensibility
     {
-        private FreeCutRibbon ribbon;
+        // 完全空的实现 - 用于测试COM加载
         private static object powerPointApp;
 
         public static object PowerPointApplication => powerPointApp;
 
         public void OnConnection(object application, int connectMode, object addInInst, ref Array custom)
         {
+            powerPointApp = application;
+
+            // 尝试写日志
             try
             {
-                powerPointApp = application;
-
-                // 初始化Ribbon
-                ribbon = new FreeCutRibbon();
-
-                System.Diagnostics.Debug.WriteLine("FreeCut插件已成功加载");
-                MessageBox.Show("FreeCut插件已成功加载！", "FreeCut", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                string logPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "FreeCut_load.log");
+                System.IO.File.AppendAllText(logPath,
+                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] OnConnection called - TEST VERSION\n");
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"FreeCut插件加载失败: {ex.Message}", "错误",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            catch { }
         }
 
         public void OnDisconnection(int removeMode, ref Array custom)
         {
-            try
-            {
-                ribbon?.Dispose();
-                ribbon = null;
-                powerPointApp = null;
-
-                System.Diagnostics.Debug.WriteLine("FreeCut插件已卸载");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"FreeCut插件卸载时发生错误: {ex.Message}");
-            }
         }
 
         public void OnAddInsUpdate(ref Array custom)
         {
-            // 插件更新时调用
         }
 
         public void OnStartupComplete(ref Array custom)
         {
-            // PowerPoint启动完成后调用
         }
 
         public void OnBeginShutdown(ref Array custom)
         {
-            // PowerPoint关闭前调用
         }
 
-        /// <summary>
-        /// 获取选中的幻灯片
-        /// </summary>
+        public string GetCustomUI(string ribbonID)
+        {
+            try
+            {
+                string logPath = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "FreeCut_load.log");
+                System.IO.File.AppendAllText(logPath,
+                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] GetCustomUI called - TEST VERSION\n");
+            }
+            catch { }
+
+            return string.Empty;
+        }
+
+        // 添加必要的静态方法以满足编译
         public static List<dynamic> GetSelectedSlides()
         {
-            var selectedSlides = new List<dynamic>();
-
-            try
-            {
-                if (powerPointApp == null) return selectedSlides;
-
-                dynamic app = powerPointApp;
-                dynamic activeWindow = app.ActiveWindow;
-
-                if (activeWindow?.Selection?.Type == 2) // ppSelectionSlides = 2
-                {
-                    dynamic slideRange = activeWindow.Selection.SlideRange;
-                    for (int i = 1; i <= slideRange.Count; i++)
-                    {
-                        selectedSlides.Add(slideRange[i]);
-                    }
-                }
-                else if (activeWindow?.View?.Type == 9) // ppViewSlide = 9
-                {
-                    // 如果在幻灯片视图中，添加当前幻灯片
-                    dynamic currentSlide = activeWindow.View.Slide;
-                    selectedSlides.Add(currentSlide);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"获取选中幻灯片失败: {ex.Message}");
-            }
-
-            return selectedSlides;
+            return new List<dynamic>();
         }
 
-        /// <summary>
-        /// 获取演示文稿中的所有幻灯片
-        /// </summary>
         public static List<dynamic> GetAllSlides()
         {
-            var allSlides = new List<dynamic>();
-
-            try
-            {
-                if (powerPointApp == null) return allSlides;
-
-                dynamic app = powerPointApp;
-                dynamic presentation = app.ActivePresentation;
-                dynamic slides = presentation.Slides;
-
-                for (int i = 1; i <= slides.Count; i++)
-                {
-                    allSlides.Add(slides[i]);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"获取所有幻灯片失败: {ex.Message}");
-            }
-
-            return allSlides;
+            return new List<dynamic>();
         }
 
-        /// <summary>
-        /// 导出幻灯片为图片
-        /// </summary>
         public static string ExportSlideToImage(dynamic slide, string outputPath, int dpi = 300)
         {
-            try
-            {
-                slide.Export(outputPath, "PNG", dpi, dpi);
-                return outputPath;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"导出幻灯片图片失败: {ex.Message}");
-                throw;
-            }
+            return string.Empty;
         }
     }
 }
+
