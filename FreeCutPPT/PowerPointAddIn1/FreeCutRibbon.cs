@@ -144,11 +144,7 @@ namespace PowerPointAddIn1
 
                 progressForm.SetProgress(100);
                 progressForm.SetProgressText("导出完成！");
-
-                MessageBox.Show($"PDF导出成功！\n保存位置：{outputPath}", "成功",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                progressForm.Hide();
+                progressForm.ShowCompleted();
             }
             catch
             {

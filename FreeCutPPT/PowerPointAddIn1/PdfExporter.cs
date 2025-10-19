@@ -130,12 +130,12 @@ namespace PowerPointAddIn1
                 printDocument.PrinterSettings.PrintToFile = true;
                 printDocument.PrinterSettings.PrintFileName = outputPath;
 
-                // 设置页面设置
-                printDocument.DefaultPageSettings.PaperSize = new PaperSize("A4", 827, 1169); // A4 in 1/100 inch
-                printDocument.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0); // 无边距
-
-                // 绑定打印事件
+                // 绑定事件 - QueryPageSettings在PrintPage之前调用
+                printDocument.QueryPageSettings += PrintDocument_QueryPageSettings;
                 printDocument.PrintPage += PrintDocument_PrintPage;
+
+                // 初始页面设置
+                printDocument.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
 
                 try
                 {
@@ -149,6 +149,29 @@ namespace PowerPointAddIn1
         }
 
         /// <summary>
+        /// 查询页面设置事件 - 在每页打印前调用
+        /// </summary>
+        private void PrintDocument_QueryPageSettings(object sender, QueryPageSettingsEventArgs e)
+        {
+            if (currentPageIndex < imagesToPrint.Count)
+            {
+                var image = imagesToPrint[currentPageIndex];
+
+                // 计算页面尺寸（单位：1/100英寸）
+                double dpi = settings.ExportDpi;
+                int paperWidth = (int)Math.Round(image.Width / dpi * 100);
+                int paperHeight = (int)Math.Round(image.Height / dpi * 100);
+
+                // 设置页面大小
+                e.PageSettings.PaperSize = new PaperSize("PPTSlide", paperWidth, paperHeight);
+                e.PageSettings.Margins = new Margins(0, 0, 0, 0);
+                e.PageSettings.Landscape = false;
+
+                System.Diagnostics.Debug.WriteLine($"QueryPageSettings 页面 {currentPageIndex + 1}: 纸张={paperWidth/100.0}\"x{paperHeight/100.0}\" ({image.Width}px x {image.Height}px @ {dpi} DPI)");
+            }
+        }
+
+        /// <summary>
         /// 打印页面事件处理
         /// </summary>
         private void PrintDocument_PrintPage(object sender, PrintPageEventArgs e)
@@ -158,37 +181,20 @@ namespace PowerPointAddIn1
                 var image = imagesToPrint[currentPageIndex];
                 var graphics = e.Graphics;
 
-                // 计算页面尺寸
+                // 设置高质量渲染模式
+                graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+
+                // 获取页面尺寸
                 var pageWidth = e.PageBounds.Width;
                 var pageHeight = e.PageBounds.Height;
-                var margin = 20; // 边距
 
-                var availableWidth = pageWidth - 2 * margin;
-                var availableHeight = pageHeight - 2 * margin;
+                System.Diagnostics.Debug.WriteLine($"PrintPage 页面 {currentPageIndex + 1}: 页面区域={pageWidth}x{pageHeight}, 图片={image.Width}x{image.Height}");
 
-                // 计算图片缩放比例
-                var scaleX = (float)availableWidth / image.Width;
-                var scaleY = (float)availableHeight / image.Height;
-
-                float scale;
-                if (settings.PreserveAspectRatio)
-                {
-                    scale = Math.Min(scaleX, scaleY);
-                }
-                else
-                {
-                    scale = Math.Min(scaleX, scaleY); // 确保图片不会超出页面
-                }
-
-                var scaledWidth = (int)(image.Width * scale);
-                var scaledHeight = (int)(image.Height * scale);
-
-                // 计算居中位置
-                var x = (pageWidth - scaledWidth) / 2;
-                var y = (pageHeight - scaledHeight) / 2;
-
-                // 绘制图片
-                graphics.DrawImage(image, x, y, scaledWidth, scaledHeight);
+                // 填满整个页面绘制图片
+                graphics.DrawImage(image, 0, 0, pageWidth, pageHeight);
 
                 currentPageIndex++;
 
@@ -381,6 +387,12 @@ namespace PowerPointAddIn1
 
             using (var graphics = Graphics.FromImage(croppedBitmap))
             {
+                // 设置高质量渲染模式
+                graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+
                 graphics.DrawImage(source, 0, 0, cropRect, GraphicsUnit.Pixel);
             }
 

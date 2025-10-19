@@ -282,6 +282,12 @@ namespace PowerPointAddIn1
             var croppedBitmap = new Bitmap(cropRect.Width, cropRect.Height);
             using (var graphics = Graphics.FromImage(croppedBitmap))
             {
+                // 设置高质量渲染模式
+                graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+
                 graphics.DrawImage(source, 0, 0, cropRect, GraphicsUnit.Pixel);
             }
 
@@ -402,11 +408,7 @@ namespace PowerPointAddIn1
 
                         progressForm.SetProgress(100);
                         progressForm.SetProgressText("导出完成！");
-
-                        MessageBox.Show($"PDF导出成功！\n保存位置：{saveDialog.FileName}", "成功",
-                            MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                        progressForm.Hide();
+                        progressForm.ShowCompleted();
                     }
                 }
 

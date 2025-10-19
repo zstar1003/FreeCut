@@ -48,7 +48,7 @@ namespace PowerPointAddIn1
         /// <summary>
         /// PDF质量（1-100）
         /// </summary>
-        public int PdfQuality { get; set; } = 95;
+        public int PdfQuality { get; set; } = 100;
 
         /// <summary>
         /// 导出DPI
@@ -132,7 +132,7 @@ namespace PowerPointAddIn1
             LeftMargin = 10;
             RightMargin = 10;
             DetectionTolerance = 5;
-            PdfQuality = 95;
+            PdfQuality = 100;
             ExportDpi = 600;
             PreserveAspectRatio = true;
             BackgroundMode = BackgroundDetectionMode.AutoDetect;

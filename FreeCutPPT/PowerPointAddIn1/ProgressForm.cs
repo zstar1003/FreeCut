@@ -172,19 +172,13 @@ namespace PowerPointAddIn1
                 lblStatus.ForeColor = System.Drawing.Color.Green;
                 lblProgress.Text = "100%";
 
-                // 显示关闭按钮
+                // 显示并启用关闭按钮
                 btnCancel.Visible = true;
+                btnCancel.Enabled = true;
                 btnCancel.Text = "关闭";
+                btnCancel.BringToFront();
 
-                // 2秒后自动关闭
-                var timer = new Timer { Interval = 2000 };
-                timer.Tick += (s, e) =>
-                {
-                    timer.Stop();
-                    timer.Dispose();
-                    this.Hide();
-                };
-                timer.Start();
+                System.Diagnostics.Debug.WriteLine("ShowCompleted: 关闭按钮已显示并启用");
             }
             catch (Exception ex)
             {
@@ -244,14 +238,36 @@ namespace PowerPointAddIn1
 
         private void BtnCancel_Click(object sender, EventArgs e)
         {
-            this.Hide();
+            System.Diagnostics.Debug.WriteLine("BtnCancel_Click: 按钮被点击");
+
+            try
+            {
+                // 重置状态
+                btnCancel.Visible = false;
+                lblStatus.Text = "准备中...";
+                lblStatus.ForeColor = System.Drawing.SystemColors.ControlText;
+                progressBar.Value = 0;
+                lblProgress.Text = "0%";
+
+                System.Diagnostics.Debug.WriteLine("BtnCancel_Click: 准备隐藏窗口");
+                this.Hide();
+                System.Diagnostics.Debug.WriteLine("BtnCancel_Click: 窗口已隐藏");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"BtnCancel_Click 错误: {ex.Message}");
+                MessageBox.Show($"关闭失败: {ex.Message}");
+            }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            // 隐藏而不是关闭窗口
-            e.Cancel = true;
-            this.Hide();
+            // 如果是用户点击关闭按钮，允许隐藏
+            if (e.CloseReason == CloseReason.UserClosing)
+            {
+                e.Cancel = true;
+                this.Hide();
+            }
         }
 
         /// <summary>
