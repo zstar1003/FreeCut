@@ -162,22 +162,39 @@ namespace PowerPointAddIn1
                     var firstImage = imagesToPrint[0];
                     double dpi = settings.ExportDpi;
 
-                    // 计算纸张尺寸（1/100英寸）
-                    int paperWidth = (int)Math.Round(firstImage.Width / dpi * 100);
-                    int paperHeight = (int)Math.Round(firstImage.Height / dpi * 100);
+                    // 计算实际尺寸（1/100英寸）
+                    int imageWidth = (int)Math.Round(firstImage.Width / dpi * 100);
+                    int imageHeight = (int)Math.Round(firstImage.Height / dpi * 100);
 
-                    // 确保横向页面：PaperSize的第一个参数（宽度）应该是较大的值
-                    // 如果图片是横向的（宽>高），直接使用
-                    // PaperSize会自动处理方向
+                    // 设置纸张尺寸和方向
+                    // PaperSize的定义：第一个参数是纵向时的宽度，第二个参数是纵向时的高度
+                    // Landscape=True 会将纸张旋转90度
+                    bool isLandscape = (firstImage.Width > firstImage.Height);
+                    int paperWidth, paperHeight;
+
+                    if (isLandscape)
+                    {
+                        // 横向：PaperSize用短边x长边（纵向定义），然后旋转
+                        paperWidth = imageHeight;  // 短边
+                        paperHeight = imageWidth;  // 长边
+                    }
+                    else
+                    {
+                        // 纵向：直接使用实际尺寸
+                        paperWidth = imageWidth;
+                        paperHeight = imageHeight;
+                    }
+
                     var paperSize = new PaperSize("PPTSlide", paperWidth, paperHeight);
                     printDocument.DefaultPageSettings.PaperSize = paperSize;
                     printDocument.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+                    printDocument.DefaultPageSettings.Landscape = isLandscape;
 
-                    // 明确设置为横向或纵向
-                    printDocument.DefaultPageSettings.Landscape = (firstImage.Width > firstImage.Height);
-
-                    System.Diagnostics.Debug.WriteLine($"默认页面设置（第一页）: 纸张={paperWidth/100.0}\"x{paperHeight/100.0}\" ({firstImage.Width}px x {firstImage.Height}px @ {dpi} DPI)");
-                    System.Diagnostics.Debug.WriteLine($"  Landscape={printDocument.DefaultPageSettings.Landscape}, 图片比例={firstImage.Width}:{firstImage.Height}");
+                    System.Diagnostics.Debug.WriteLine($"默认页面设置（第一页）:");
+                    System.Diagnostics.Debug.WriteLine($"  图片尺寸: {firstImage.Width}px x {firstImage.Height}px @ {dpi} DPI");
+                    System.Diagnostics.Debug.WriteLine($"  实际尺寸: {imageWidth/100.0}\" x {imageHeight/100.0}\"");
+                    System.Diagnostics.Debug.WriteLine($"  PaperSize: {paperWidth/100.0}\" x {paperHeight/100.0}\"");
+                    System.Diagnostics.Debug.WriteLine($"  Landscape: {isLandscape}");
                 }
 
                 // 绑定事件 - QueryPageSettings在PrintPage之前调用（从第二页开始）
@@ -207,21 +224,39 @@ namespace PowerPointAddIn1
             if (nextPageIndex < imagesToPrint.Count)
             {
                 var image = imagesToPrint[nextPageIndex];
-
-                // 计算页面尺寸（单位：1/100英寸）
                 double dpi = settings.ExportDpi;
-                int paperWidth = (int)Math.Round(image.Width / dpi * 100);
-                int paperHeight = (int)Math.Round(image.Height / dpi * 100);
 
-                // 设置页面大小
+                // 计算实际尺寸（1/100英寸）
+                int imageWidth = (int)Math.Round(image.Width / dpi * 100);
+                int imageHeight = (int)Math.Round(image.Height / dpi * 100);
+
+                // 设置纸张尺寸和方向
+                // PaperSize的定义：第一个参数是纵向时的宽度，第二个参数是纵向时的高度
+                bool isLandscape = (image.Width > image.Height);
+                int paperWidth, paperHeight;
+
+                if (isLandscape)
+                {
+                    // 横向：PaperSize用短边x长边（纵向定义），然后旋转
+                    paperWidth = imageHeight;  // 短边
+                    paperHeight = imageWidth;  // 长边
+                }
+                else
+                {
+                    // 纵向：直接使用实际尺寸
+                    paperWidth = imageWidth;
+                    paperHeight = imageHeight;
+                }
+
                 e.PageSettings.PaperSize = new PaperSize("PPTSlide", paperWidth, paperHeight);
                 e.PageSettings.Margins = new Margins(0, 0, 0, 0);
+                e.PageSettings.Landscape = isLandscape;
 
-                // 设置横向或纵向
-                e.PageSettings.Landscape = (image.Width > image.Height);
-
-                System.Diagnostics.Debug.WriteLine($"QueryPageSettings 页面 {nextPageIndex + 1}: 纸张={paperWidth/100.0}\"x{paperHeight/100.0}\" ({image.Width}px x {image.Height}px @ {dpi} DPI)");
-                System.Diagnostics.Debug.WriteLine($"  Landscape={e.PageSettings.Landscape}");
+                System.Diagnostics.Debug.WriteLine($"QueryPageSettings 页面 {nextPageIndex + 1}:");
+                System.Diagnostics.Debug.WriteLine($"  图片尺寸: {image.Width}px x {image.Height}px @ {dpi} DPI");
+                System.Diagnostics.Debug.WriteLine($"  实际尺寸: {imageWidth/100.0}\" x {imageHeight/100.0}\"");
+                System.Diagnostics.Debug.WriteLine($"  PaperSize: {paperWidth/100.0}\" x {paperHeight/100.0}\"");
+                System.Diagnostics.Debug.WriteLine($"  Landscape: {isLandscape}");
             }
         }
 
@@ -242,27 +277,18 @@ namespace PowerPointAddIn1
                 graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
 
                 // 获取页面尺寸（单位是1/100英寸）
+                // Graphics的绘制坐标也是1/100英寸，直接使用PageBounds即可
                 var pageBoundsWidth = e.PageBounds.Width;
                 var pageBoundsHeight = e.PageBounds.Height;
 
-                // Graphics的DPI
-                float graphicsDpiX = graphics.DpiX;
-                float graphicsDpiY = graphics.DpiY;
-
-                // 计算绘制区域（Graphics坐标单位）
-                // PageBounds是1/100英寸，需要转换为Graphics坐标
-                float drawWidth = pageBoundsWidth * graphicsDpiX / 100f;
-                float drawHeight = pageBoundsHeight * graphicsDpiY / 100f;
-
                 System.Diagnostics.Debug.WriteLine($"PrintPage 页面 {currentPageIndex + 1}:");
                 System.Diagnostics.Debug.WriteLine($"  PageBounds={pageBoundsWidth}x{pageBoundsHeight} (1/100英寸)");
-                System.Diagnostics.Debug.WriteLine($"  GraphicsDPI={graphicsDpiX}x{graphicsDpiY}");
-                System.Diagnostics.Debug.WriteLine($"  绘制尺寸={drawWidth}x{drawHeight} (Graphics单位)");
                 System.Diagnostics.Debug.WriteLine($"  图片尺寸={image.Width}x{image.Height} (像素)");
-                System.Diagnostics.Debug.WriteLine($"  Landscape={e.PageSettings.Landscape}");
+                System.Diagnostics.Debug.WriteLine($"  Graphics.PageUnit={graphics.PageUnit}");
 
-                // 使用计算出的绘制尺寸，填满整个页面
-                graphics.DrawImage(image, 0, 0, drawWidth, drawHeight);
+                // 直接使用PageBounds绘制，填满整个页面
+                // DrawImage的宽高参数单位和Graphics.PageUnit一致（通常是1/100英寸）
+                graphics.DrawImage(image, 0, 0, pageBoundsWidth, pageBoundsHeight);
 
                 currentPageIndex++;
 
