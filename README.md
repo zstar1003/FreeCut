@@ -9,7 +9,7 @@ FreeCut是一个PowerPoint插件，专为学术论文写作设计。它可以选
 - ✅ **智能页面选择**: 支持单页和多页选择导出
 - ✅ **自动检测边界**: 智能识别内容区域，自动裁剪空白
 - ✅ **自定义边距**: 支持上下左右边距精确设置（0-500像素）
-- ✅ **高质量PNG导出**: 可配置DPI（72-600），PDF功能开发中
+- ✅ **高质量PDF导出**: 可配置DPI（72-600），支持精确裁剪
 - ✅ **实时预览**: 所见即所得的裁剪效果预览
 - ✅ **批量处理**: 一次性处理多个页面
 - ✅ **设置持久化**: 自动保存用户偏好配置
@@ -21,6 +21,7 @@ FreeCut是一个PowerPoint插件，专为学术论文写作设计。它可以选
 我们基于VSTO（Visual Studio Tools for Office）技术开发了功能完整的PowerPoint COM Add-in，具有以下特性：
 
 ### 技术优势
+
 - 🎯 **原生集成**: 直接集成到PowerPoint Ribbon界面
 - 🔧 **高性能**: 基于.NET Framework 4.8，性能稳定
 - 📦 **便捷安装**: 支持ClickOnce部署和注册表安装
@@ -28,95 +29,74 @@ FreeCut是一个PowerPoint插件，专为学术论文写作设计。它可以选
 - 💻 **Windows原生**: 专为Windows PowerPoint优化
 
 ### 技术栈
+
 - **后端**: C# .NET Framework 4.7.2
 - **界面**: Windows Forms
-- **图像处理**: System.Drawing (PNG导出)
-- **PDF处理**: 开发中 (依赖库兼容性问题)
+- **图像处理**: System.Drawing
+- **PDF处理**: SkiaSharp (高质量PDF生成)
 - **Office集成**: Microsoft.Office.Interop.PowerPoint
 - **部署**: 可执行安装器或注册表安装
 
-## ⚠️ PDF功能开发状态
+## ✅ PDF导出功能
 
 ### 当前版本
-- ✅ **PNG导出功能**: 完全可用，支持高质量图像导出
-- 🔄 **PDF导出功能**: 正在开发中，遇到依赖库兼容性问题
 
-### PDF功能技术问题
-由于 .NET Framework 4.7.2 环境下的依赖库兼容性问题：
-- iTextSharp 5.5.13.3 包依赖解析失败
-- PDFsharp 在当前构建环境下无法正确加载
-- .NET Core/5.0+ 工具链与传统 .NET Framework 项目存在集成困难
+- ✅ **PDF导出功能**: 完全可用，基于SkiaSharp实现高质量PDF生成
+- ✅ **DPI自适应**: 支持72/150/300/600 DPI，自动保持物理尺寸一致
+- ✅ **精确裁剪**: 智能边界检测和自定义边距控制
+- ✅ **批量处理**: 支持多页幻灯片一次性导出
 
-### 临时解决方案
-用户可以使用以下方式获得PDF输出：
-1. **使用PNG导出 + 转换工具**:
-   - 导出高质量PNG图片
-   - 使用Adobe Acrobat、在线工具或其他软件转换为PDF
-2. **PowerPoint原生导出**:
-   - 使用PowerPoint的"导出为PDF"功能
-   - 然后使用FreeCut对PDF进行二次裁剪处理
+### 技术实现
 
-### PDF功能恢复计划
-1. **环境升级**: 考虑升级到.NET Framework 4.8或.NET 6+
-2. **依赖库替换**: 评估其他.NET Framework兼容的PDF库
-3. **Visual Studio NuGet**: 使用Visual Studio包管理器手动安装
-4. **分离架构**: 将PDF生成独立为单独的服务组件
+采用 **SkiaSharp** 库直接生成PDF，具有以下特点：
+
+- 精确的页面尺寸控制（点为单位，1英寸 = 72点）
+- DPI自适应边距缩放，确保不同DPI下物理尺寸一致
+- 高质量图像嵌入，无损或可控压缩
+- 跨平台兼容性（.NET Framework 4.7.2+）
+
+### 使用方法
+
+1. **打开PowerPoint**: 在Ribbon中找到"FreeCut"标签页
+2. **选择幻灯片**: 选中需要导出的一个或多个幻灯片
+3. **配置设置**: 点击"FreeCut设置"调整边距、DPI等参数
+4. **导出PDF**: 点击"导出PDF"选择保存位置即可
 
 ## 📥 安装和构建
 
-### 1. 开发环境要求
+### 快速安装（推荐）
+
+#### 方法一：使用安装脚本（最简单）⭐
+
+1. 在 Visual Studio 中打开并构建项目（Release 配置）
+2. 双击运行 `Install-FreeCut.bat` 或 `Install-FreeCut.ps1`
+3. 选择"安装插件"，等待安装完成
+4. 重启 PowerPoint，在 Ribbon 中查找"FreeCut"标签页
+
+**详细安装指南**: 📖 查看 [INSTALL.md](INSTALL.md) 获取完整的安装、卸载和故障排除指南
+
+#### 方法二：Visual Studio 调试模式
+
+1. 在 Visual Studio 中打开项目
+2. 按 `F5` 启动调试
+3. PowerPoint 会自动启动并加载插件
+
+### 开发环境要求
+
 - Windows 10/11
-- Visual Studio 2017 或更新版本
-- .NET Framework 4.7.2 Developer Pack
-- PowerPoint 2016 或更新版本
-- VSTO运行时（通常随Visual Studio安装）
+- Visual Studio 2017 或更高版本
+- .NET Framework 4.8 Developer Pack
+- PowerPoint 2016 或更高版本
+- VSTO 运行时（通常随 Visual Studio 安装）
 
-### 2. 构建项目
+### 项目构建
 
-```bash
-# 1. 克隆项目
-git clone [项目地址]
-cd FreeCut
+#### 在 Visual Studio 中构建
 
-# 2. 构建FreeCut插件
-dotnet build FreeCut.csproj --configuration Release
-
-# 3. 构建安装器
-csc FreeCutInstaller.cs /target:winexe /out:FreeCutInstaller.exe /reference:System.Windows.Forms.dll
-
-# 4. 或使用一键构建脚本
-.\build_all.bat
-```
-
-### 3. 安装插件
-
-#### 方法一：使用可执行安装器（推荐）
-1. 构建或下载 `FreeCutInstaller.exe`
-2. 以管理员权限运行安装器
-3. 点击"安装插件"按钮，安装器会自动：
-   - 检查并复制插件文件
-   - 创建清单文件
-   - 注册插件到PowerPoint
-4. 重启PowerPoint，在Ribbon中查找"FreeCut"标签页
-
-#### 方法二：开发调试安装
-1. 在Visual Studio中按F5运行项目
-2. 会自动启动PowerPoint并加载插件
-
-#### 方法三：手动注册表安装
-1. 编译项目生成FreeCut.dll
-2. 将DLL复制到合适位置
-3. 运行以下注册表脚本：
-
-```reg
-Windows Registry Editor Version 5.00
-
-[HKEY_CURRENT_USER\Software\Microsoft\Office\PowerPoint\Addins\FreeCut.ThisAddIn]
-"Description"="FreeCut - PPT自动裁剪PDF导出插件"
-"FriendlyName"="FreeCut"
-"LoadBehavior"=dword:00000003
-"Manifest"="file:///C:/FreeCut/FreeCut.dll.manifest"
-```
+1. 打开 `FreeCutPPT\PowerPointAddIn1\PowerPointAddIn1.sln`
+2. 选择 `Release` 配置
+3. 点击 `生成` → `重新生成解决方案`
+4. 输出位于 `FreeCutPPT\PowerPointAddIn1\bin\Release\`
 
 ## 🎨 使用界面
 
@@ -157,6 +137,7 @@ FreeCut设置窗口
 ## ⚙️ 详细功能说明
 
 ### 裁剪设置
+
 - **自动检测边界**:
   - ✅ 启用：智能识别内容区域，边距作为额外缓冲区
   - ❌ 禁用：按固定边距进行裁剪
@@ -165,6 +146,7 @@ FreeCut设置窗口
 - **背景模式**: 自动检测/白色/透明/自定义颜色
 
 ### 导出设置
+
 - **导出DPI**:
   - 72 DPI：网页显示
   - 150 DPI：一般打印（默认）
@@ -183,12 +165,12 @@ FreeCut设置窗口
 
 假设一张 PPT 幻灯片的物理尺寸为 **10 英寸 × 7.5 英寸**（标准 16:9 比例）：
 
-| DPI | 输出像素尺寸 | 文件大小 | 适用场景 |
-|-----|------------|---------|---------|
-| **72 DPI** | 720 × 540 px | ~100 KB | 网页显示、屏幕浏览 |
-| **150 DPI** | 1500 × 1125 px | ~500 KB | 一般打印、日常文档（默认） |
-| **300 DPI** | 3000 × 2250 px | ~2 MB | 高质量印刷、学术论文 |
-| **600 DPI** | 6000 × 4500 px | ~8 MB | 专业印刷、出版物 |
+| DPI               | 输出像素尺寸    | 文件大小 | 适用场景                   |
+| ----------------- | --------------- | -------- | -------------------------- |
+| **72 DPI**  | 720 × 540 px   | ~100 KB  | 网页显示、屏幕浏览         |
+| **150 DPI** | 1500 × 1125 px | ~500 KB  | 一般打印、日常文档（默认） |
+| **300 DPI** | 3000 × 2250 px | ~2 MB    | 高质量印刷、学术论文       |
+| **600 DPI** | 6000 × 4500 px | ~8 MB    | 专业印刷、出版物           |
 
 #### 为什么不同 DPI 下 PDF 页面大小相同？
 
@@ -219,6 +201,7 @@ FreeCut设置窗口
 ### DPI 选择建议
 
 #### 1. 学术论文（推荐 300 DPI）
+
 ```
 场景：提交给期刊或会议的论文配图
 要求：高清晰度、可放大查看细节
@@ -230,6 +213,7 @@ FreeCut设置窗口
 ```
 
 #### 2. 日常文档（推荐 150 DPI）
+
 ```
 场景：内部报告、演示文稿、教学材料
 要求：清晰可读、文件大小适中
@@ -241,6 +225,7 @@ FreeCut设置窗口
 ```
 
 #### 3. 网页发布（推荐 72 DPI）
+
 ```
 场景：网站、博客、在线分享
 要求：快速加载、屏幕显示
@@ -251,6 +236,7 @@ FreeCut设置窗口
 ```
 
 #### 4. 专业印刷（推荐 600 DPI）
+
 ```
 场景：书籍出版、海报印刷、展览
 要求：极致清晰、可大幅放大
@@ -285,11 +271,10 @@ A: 使用 300 DPI + 适当的 PDF 质量设置（85-95），这样可以在保�
 **Q: 边距设置会影响 PDF 页面大小吗？**
 A: 是的。边距裁剪后，PDF 页面会完全匹配裁剪后图像的物理尺寸。使用自动检测边界 + 小边距可获得最紧凑的输出。
 
-
-
 ## 🎨 使用场景示例
 
 ### 📚 学术论文场景
+
 ```
 任务：将PPT中的流程图导出到LaTeX论文中
 操作步骤：
@@ -304,6 +289,7 @@ A: 是的。边距裁剪后，PDF 页面会完全匹配裁剪后图像的物理�
 ```
 
 ### 📊 研究报告场景
+
 ```
 任务：批量导出图表制作报告附件
 操作步骤：
@@ -346,22 +332,26 @@ FreeCut/ (VSTO PowerPoint插件)
 ### 常见问题
 
 **❓ 插件未显示在Ribbon中**
+
 - 检查PowerPoint版本（需要2016+）
 - 确认.NET Framework 4.8已安装
 - 检查VSTO运行时是否安装
 - 验证注册表项是否正确
 
 **❓ 构建失败**
+
 - 确保安装了.NET Framework 4.8 Developer Pack
 - 检查Visual Studio是否支持VSTO开发
 - 验证NuGet包是否正确恢复
 
 **❓ 导出功能异常**
+
 - 检查PowerPoint是否选中了幻灯片
 - 确认导出路径有写入权限
 - 验证iTextSharp依赖是否正确加载
 
 **❓ 权限和安全问题**
+
 - 检查PowerPoint宏安全设置
 - 确认插件是否被信任中心阻止
 - 验证数字签名（如果使用）
@@ -369,21 +359,25 @@ FreeCut/ (VSTO PowerPoint插件)
 ## 📈 功能状态
 
 ### ✅ 已完成功能
+
 - 完整的VSTO COM Add-in架构
 - Ribbon界面集成
 - 设置管理和持久化存储
 - Windows Forms用户界面
-- 基础PDF导出功能
-- 图像裁剪算法框架
+- **完整的PDF导出功能（基于SkiaSharp）**
+- **DPI自适应边距缩放算法**
+- 图像裁剪和边界检测算法
 - 进度显示和预览功能
 
 ### 🚧 需要进一步开发
+
 - 优化自动边界检测算法
-- 完善PDF质量控制
+- PDF质量压缩控制（当前为无损输出）
 - 增强图像处理性能
-- 添加更多导出格式
+- 添加更多导出格式（SVG、EPS等）
 
 ### 💡 未来计划
+
 - ClickOnce自动部署
 - 多语言支持
 - 云存储集成
@@ -392,21 +386,27 @@ FreeCut/ (VSTO PowerPoint插件)
 ## 📞 技术支持
 
 ### 构建环境配置
+
 如遇到构建问题，请确保：
+
 1. 安装Visual Studio 2017+（包含VSTO开发工具）
 2. 安装.NET Framework 4.8 Developer Pack
 3. 安装PowerPoint 2016+
 4. 配置合适的代码签名证书（可选）
 
 ### 问题报告
+
 如遇到问题，请提供：
+
 - Windows版本和PowerPoint版本
 - Visual Studio版本
 - 详细的错误信息和操作步骤
 - 示例PPT文件（如可能）
 
 ### 贡献代码
+
 欢迎提交改进建议：
+
 - 新功能需求
 - 性能优化建议
 - 用户体验改进
@@ -421,12 +421,14 @@ FreeCut/ (VSTO PowerPoint插件)
 ## 💡 开发者说明
 
 ### 核心架构特点
+
 1. **COM互操作**: 使用dynamic类型简化PowerPoint对象模型交互
 2. **异步处理**: 避免UI阻塞，提供流畅的用户体验
 3. **错误恢复**: 完善的异常处理和用户友好的错误提示
 4. **模块化设计**: 清晰的职责分离，便于维护和扩展
 
 ### 性能优化
+
 - 延迟加载UI组件
 - 临时文件自动清理
 - 内存使用优化
