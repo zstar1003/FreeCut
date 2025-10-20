@@ -101,7 +101,7 @@ namespace PowerPointAddIn1
             this.lblTitle.Name = "lblTitle";
             this.lblTitle.Size = new System.Drawing.Size(111, 15);
             this.lblTitle.TabIndex = 6;
-            this.lblTitle.Text = "FreeCut 导出进度";
+            // this.lblTitle.Text = "FreeCut 导出进度";
             //
             // ProgressForm
             //
