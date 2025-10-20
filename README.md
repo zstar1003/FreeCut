@@ -1,8 +1,15 @@
+<div align="center">
+  <img src="ui/logo.jpeg" width="200" alt="LOGO">
+</div>
+
+
 # FreeCut - PPT自动裁剪PDF导出插件
 
 ## 🎯 功能简介
 
 FreeCut是一个PowerPoint插件，专为学术论文写作设计。它可以选中PPT页面后，自动裁剪并导出为PDF文件，解决了PPT导出PDF后需要手动裁剪的问题。
+
+windows：https://github.com/zstar1003/FreeCut/releases/download/v1.0.0/FreeCut_setup.zip
 
 ## ✨ 主要功能
 
