@@ -11,7 +11,6 @@ namespace PowerPointAddIn1
     {
         private SettingsForm settingsForm;
         private ProgressForm progressForm;
-        private PreviewForm previewForm;
 
         private void FreeCutRibbon_Load(object sender, RibbonUIEventArgs e)
         {
@@ -70,47 +69,6 @@ namespace PowerPointAddIn1
             catch (Exception ex)
             {
                 MessageBox.Show($"导出PDF失败：{ex.Message}", "错误",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void btnPreview_Click(object sender, RibbonControlEventArgs e)
-        {
-            try
-            {
-                var selectedSlides = Globals.ThisAddIn.GetSelectedSlides();
-                if (selectedSlides.Count == 0)
-                {
-                    MessageBox.Show("请先选择要预览的幻灯片", "提示",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-
-                if (previewForm == null || previewForm.IsDisposed)
-                {
-                    previewForm = new PreviewForm();
-                }
-
-                previewForm.LoadPreview(selectedSlides);
-                previewForm.Show();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"预览失败：{ex.Message}", "错误",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void btnRefresh_Click(object sender, RibbonControlEventArgs e)
-        {
-            try
-            {
-                MessageBox.Show("设置已重新加载", "FreeCut",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"重新加载设置失败：{ex.Message}", "错误",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

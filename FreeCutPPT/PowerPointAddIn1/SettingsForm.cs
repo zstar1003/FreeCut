@@ -71,16 +71,6 @@ namespace PowerPointAddIn1
             btnSave.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
             btnSave.FlatAppearance.BorderSize = 0;
 
-            btnExport.BackColor = System.Drawing.Color.FromArgb(16, 124, 16);
-            btnExport.ForeColor = System.Drawing.Color.White;
-            btnExport.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            btnExport.FlatAppearance.BorderSize = 0;
-
-            btnPreview.BackColor = System.Drawing.Color.FromArgb(0, 99, 177);
-            btnPreview.ForeColor = System.Drawing.Color.White;
-            btnPreview.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-            btnPreview.FlatAppearance.BorderSize = 0;
-
             btnReset.BackColor = System.Drawing.Color.FromArgb(255, 140, 0);
             btnReset.ForeColor = System.Drawing.Color.White;
             btnReset.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
@@ -178,8 +168,6 @@ namespace PowerPointAddIn1
             btnSave.Click += BtnSave_Click;
             btnReset.Click += BtnReset_Click;
             btnCancel.Click += BtnCancel_Click;
-            btnPreview.Click += BtnPreview_Click;
-            btnExport.Click += BtnExport_Click;
             btnSetAllMargins.Click += BtnSetAllMargins_Click;
         }
 
@@ -260,7 +248,6 @@ namespace PowerPointAddIn1
                 bool isValid = currentSettings.Validate(out errorMessage);
 
                 btnSave.Enabled = isValid;
-                btnExport.Enabled = isValid;
 
                 if (!isValid)
                 {
@@ -278,7 +265,6 @@ namespace PowerPointAddIn1
                 lblValidation.Text = $"验证失败：{ex.Message}";
                 lblValidation.ForeColor = System.Drawing.Color.Red;
                 btnSave.Enabled = false;
-                btnExport.Enabled = false;
             }
         }
 
@@ -311,82 +297,6 @@ namespace PowerPointAddIn1
         private void BtnCancel_Click(object sender, EventArgs e)
         {
             this.Hide();
-        }
-
-        private void BtnPreview_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                // 获取当前选中的幻灯片
-                var selectedSlides = Globals.ThisAddIn.GetSelectedSlides();
-                if (selectedSlides.Count == 0)
-                {
-                    MessageBox.Show("请先在PowerPoint中选择要预览的幻灯片", "提示",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-
-                // 显示预览窗口
-                var previewForm = new PreviewForm();
-                previewForm.LoadPreview(selectedSlides);
-                previewForm.Show();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"预览失败：{ex.Message}", "错误",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void BtnExport_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                // 先保存当前设置
-                currentSettings.Save();
-
-                // 获取选中的幻灯片
-                var selectedSlides = Globals.ThisAddIn.GetSelectedSlides();
-                if (selectedSlides.Count == 0)
-                {
-                    MessageBox.Show("请先选择要导出的幻灯片", "提示",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-
-                // 获取保存路径
-                using (var saveDialog = new SaveFileDialog())
-                {
-                    saveDialog.Filter = "PDF文件|*.pdf";
-                    saveDialog.Title = "选择PDF保存位置";
-                    saveDialog.FileName = $"PPT导出_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
-
-                    if (saveDialog.ShowDialog() == DialogResult.OK)
-                    {
-                        // 执行导出
-                        var progressForm = new ProgressForm();
-                        progressForm.Show();
-                        progressForm.SetProgressText("准备导出...");
-                        progressForm.SetProgress(0);
-
-                        var exporter = new PdfExporter(currentSettings);
-                        exporter.ExportToPdf(selectedSlides, saveDialog.FileName, (progress, message) =>
-                        {
-                            progressForm.SetProgress(progress);
-                            progressForm.SetProgressText(message);
-                        });
-
-                        progressForm.SetProgress(100);
-                        progressForm.SetProgressText("导出完成！");
-                        progressForm.ShowCompleted();
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"导出失败：{ex.Message}", "错误",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
         }
 
         private void BtnSetAllMargins_Click(object sender, EventArgs e)

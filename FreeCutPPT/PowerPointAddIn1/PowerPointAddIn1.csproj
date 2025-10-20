@@ -179,9 +179,13 @@
       <DependentUpon>FreeCutRibbon.cs</DependentUpon>
     </Compile>
     <Compile Include="PdfExporter.cs" />
-    <Compile Include="PreviewForm.cs" />
+    <Compile Include="PreviewForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="PreviewForm.Designer.cs" />
-    <Compile Include="ProgressForm.cs" />
+    <Compile Include="ProgressForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="ProgressForm.Designer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
@@ -211,7 +215,9 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
-    <Compile Include="SettingsForm.cs" />
+    <Compile Include="SettingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="SettingsForm.Designer.cs" />
     <Compile Include="ThisAddIn.cs">
       <SubType>Code</SubType>

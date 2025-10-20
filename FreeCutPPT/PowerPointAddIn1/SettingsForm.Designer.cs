@@ -54,8 +54,6 @@ namespace PowerPointAddIn1
             this.numPdfQuality = new System.Windows.Forms.NumericUpDown();
             this.lblPdfQuality = new System.Windows.Forms.Label();
             this.grpActions = new System.Windows.Forms.GroupBox();
-            this.btnExport = new System.Windows.Forms.Button();
-            this.btnPreview = new System.Windows.Forms.Button();
             this.btnReset = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
             this.btnSave = new System.Windows.Forms.Button();
@@ -319,8 +317,6 @@ namespace PowerPointAddIn1
             //
             // grpActions
             //
-            this.grpActions.Controls.Add(this.btnExport);
-            this.grpActions.Controls.Add(this.btnPreview);
             this.grpActions.Controls.Add(this.btnReset);
             this.grpActions.Controls.Add(this.btnCancel);
             this.grpActions.Controls.Add(this.btnSave);
@@ -330,24 +326,6 @@ namespace PowerPointAddIn1
             this.grpActions.TabIndex = 3;
             this.grpActions.TabStop = false;
             this.grpActions.Text = "操作";
-            //
-            // btnExport
-            //
-            this.btnExport.Location = new System.Drawing.Point(290, 25);
-            this.btnExport.Name = "btnExport";
-            this.btnExport.Size = new System.Drawing.Size(60, 25);
-            this.btnExport.TabIndex = 4;
-            this.btnExport.Text = "导出PDF";
-            this.btnExport.UseVisualStyleBackColor = true;
-            //
-            // btnPreview
-            //
-            this.btnPreview.Location = new System.Drawing.Point(220, 25);
-            this.btnPreview.Name = "btnPreview";
-            this.btnPreview.Size = new System.Drawing.Size(60, 25);
-            this.btnPreview.TabIndex = 3;
-            this.btnPreview.Text = "预览";
-            this.btnPreview.UseVisualStyleBackColor = true;
             //
             // btnReset
             //
@@ -458,8 +436,6 @@ namespace PowerPointAddIn1
         private System.Windows.Forms.NumericUpDown numPdfQuality;
         private System.Windows.Forms.Label lblPdfQuality;
         private System.Windows.Forms.GroupBox grpActions;
-        private System.Windows.Forms.Button btnExport;
-        private System.Windows.Forms.Button btnPreview;
         private System.Windows.Forms.Button btnReset;
         private System.Windows.Forms.Button btnCancel;
         private System.Windows.Forms.Button btnSave;
