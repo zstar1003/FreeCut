@@ -2,25 +2,21 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Drawing.Printing;
 using System.IO;
+using SkiaSharp;
 
 namespace PowerPointAddIn1
 {
     /// <summary>
-    /// PDF导出器 - 使用Windows内置PDF功能导出真正的PDF文档
+    /// PDF导出器 - 使用SkiaSharp直接生成PDF文档，避免Windows打印系统的坐标转换问题
     /// </summary>
     public class PdfExporter
     {
         private readonly CropSettings settings;
-        private List<System.Drawing.Image> imagesToPrint;
-        private int currentPageIndex;
-        private string outputFilePath;
 
         public PdfExporter(CropSettings settings)
         {
             this.settings = settings ?? throw new ArgumentNullException(nameof(settings));
-            this.imagesToPrint = new List<System.Drawing.Image>();
         }
 
         /// <summary>
@@ -31,7 +27,7 @@ namespace PowerPointAddIn1
             if (slides == null || slides.Count == 0)
                 throw new ArgumentException("幻灯片列表不能为空", nameof(slides));
 
-            System.Diagnostics.Debug.WriteLine($"========== 开始导出 {slides.Count} 张幻灯片 ==========");
+            System.Diagnostics.Debug.WriteLine($"========== 开始导出 {slides.Count} 张幻灯片 (SkiaSharp) ==========");
             System.Diagnostics.Debug.WriteLine($"导出DPI: {settings.ExportDpi}");
             System.Diagnostics.Debug.WriteLine($"自动检测边界: {settings.AutoDetectBounds}");
             System.Diagnostics.Debug.WriteLine($"边距: 上{settings.TopMargin} 下{settings.BottomMargin} 左{settings.LeftMargin} 右{settings.RightMargin}");
@@ -40,60 +36,56 @@ namespace PowerPointAddIn1
 
             try
             {
-                // 清理之前的图片
-                ClearImages();
+                // 先处理所有幻灯片为图片
+                var processedImages = new List<(System.Drawing.Image image, float width, float height)>();
 
-                // 处理所有幻灯片为图片
-                for (int i = 0; i < slides.Count; i++)
+                try
                 {
-                    var slide = slides[i];
-                    var progress = (int)((float)(i + 1) / slides.Count * 80); // 80% for processing
-                    progressCallback?.Invoke(progress, $"正在处理第 {i + 1}/{slides.Count} 张幻灯片...");
-
-                    try
+                    for (int i = 0; i < slides.Count; i++)
                     {
-                        var processedImage = ProcessSlideToImage(slide, i + 1);
-                        if (processedImage != null)
+                        var slide = slides[i];
+                        var progress = (int)((float)(i + 1) / slides.Count * 80);
+                        progressCallback?.Invoke(progress, $"正在处理第 {i + 1}/{slides.Count} 张幻灯片...");
+
+                        try
                         {
-                            imagesToPrint.Add(processedImage);
+                            var imageData = ProcessSlideToImageData(slide, i + 1);
+                            processedImages.Add(imageData);
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"处理第 {i + 1} 张幻灯片失败: {ex.Message}");
+                            throw;
                         }
                     }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"处理第 {i + 1} 张幻灯片失败: {ex.Message}");
-                        // 继续处理其他幻灯片
-                    }
-                }
 
-                if (imagesToPrint.Count > 0)
-                {
                     progressCallback?.Invoke(85, "正在生成PDF文档...");
 
-                    // 使用Windows打印功能导出为PDF
-                    PrintToPdf(outputPath);
+                    // 一次性创建包含所有页面的PDF
+                    CreatePdfDocument(processedImages, outputPath);
 
                     progressCallback?.Invoke(100, "PDF导出完成");
+                    System.Diagnostics.Debug.WriteLine($"========== PDF导出完成 ==========");
                 }
-                else
+                finally
                 {
-                    throw new InvalidOperationException("没有成功处理任何幻灯片");
+                    // 清理所有图片资源
+                    foreach (var (image, _, _) in processedImages)
+                    {
+                        image?.Dispose();
+                    }
                 }
             }
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"PDF导出失败: {ex.Message}", ex);
             }
-            finally
-            {
-                // 清理图片资源
-                ClearImages();
-            }
         }
 
         /// <summary>
-        /// 处理单张幻灯片为图片并返回处理后的图片
+        /// 处理单张幻灯片为图片数据
         /// </summary>
-        private System.Drawing.Image ProcessSlideToImage(dynamic slide, int slideNumber)
+        private (System.Drawing.Image image, float widthInPoints, float heightInPoints) ProcessSlideToImageData(dynamic slide, int slideNumber)
         {
             string tempImagePath = Path.Combine(Path.GetTempPath(), $"FreeCut_Slide_{slideNumber}_{Guid.NewGuid()}.png");
 
@@ -115,18 +107,29 @@ namespace PowerPointAddIn1
                 System.Diagnostics.Debug.WriteLine($"  幻灯片尺寸: {slideWidthInPoints:F1} x {slideHeightInPoints:F1} 磅 = {slideWidthInInches:F2}\" x {slideHeightInInches:F2}\"");
                 System.Diagnostics.Debug.WriteLine($"  导出尺寸: {exportWidth} x {exportHeight} 像素 @ {settings.ExportDpi} DPI");
 
-                // 使用PowerPoint导出幻灯片为图片（指定像素尺寸）
+                // 使用PowerPoint导出幻灯片为图片
                 slide.Export(tempImagePath, "PNG", exportWidth, exportHeight);
 
-                // 处理图片
+                // 加载并处理图片
                 using (var originalImage = System.Drawing.Image.FromFile(tempImagePath))
                 {
                     System.Diagnostics.Debug.WriteLine($"  导出后实际尺寸: {originalImage.Width}x{originalImage.Height}");
 
+                    // 裁剪图片
                     var croppedImage = CropImage(originalImage);
-
                     System.Diagnostics.Debug.WriteLine($"  最终尺寸: {croppedImage.Width}x{croppedImage.Height}");
-                    return croppedImage;
+
+                    // 计算PDF页面的物理尺寸（英寸）
+                    float pageWidthInInches = croppedImage.Width / (float)settings.ExportDpi;
+                    float pageHeightInInches = croppedImage.Height / (float)settings.ExportDpi;
+
+                    // 转换为点（1英寸 = 72点）
+                    float pageWidthInPoints = pageWidthInInches * 72f;
+                    float pageHeightInPoints = pageHeightInInches * 72f;
+
+                    System.Diagnostics.Debug.WriteLine($"  PDF页面尺寸: {pageWidthInPoints:F1} x {pageHeightInPoints:F1} 点 ({pageWidthInInches:F2}\" x {pageHeightInInches:F2}\")");
+
+                    return (croppedImage, pageWidthInPoints, pageHeightInPoints);
                 }
             }
             finally
@@ -134,185 +137,43 @@ namespace PowerPointAddIn1
                 // 清理临时文件
                 if (File.Exists(tempImagePath))
                 {
-                    File.Delete(tempImagePath);
+                    try { File.Delete(tempImagePath); } catch { }
                 }
             }
         }
 
         /// <summary>
-        /// 使用Windows打印功能将图片列表导出为PDF
+        /// 使用SkiaSharp创建包含所有页面的PDF文档
         /// </summary>
-        private void PrintToPdf(string outputPath)
+        private void CreatePdfDocument(List<(System.Drawing.Image image, float width, float height)> pages, string outputPath)
         {
-            this.outputFilePath = outputPath;
-            this.currentPageIndex = 0;
-
-            System.Diagnostics.Debug.WriteLine($"========== 开始打印PDF: 共{imagesToPrint.Count}页 ==========");
-
-            using (var printDocument = new PrintDocument())
+            using (var stream = new FileStream(outputPath, FileMode.Create, FileAccess.Write))
+            using (var document = SKDocument.CreatePdf(stream))
             {
-                // 设置打印机为Microsoft Print to PDF
-                printDocument.PrinterSettings.PrinterName = "Microsoft Print to PDF";
-                printDocument.PrinterSettings.PrintToFile = true;
-                printDocument.PrinterSettings.PrintFileName = outputPath;
-
-                // 为第一页设置默认纸张大小
-                if (imagesToPrint.Count > 0)
+                foreach (var (image, pageWidth, pageHeight) in pages)
                 {
-                    var firstImage = imagesToPrint[0];
-                    double dpi = settings.ExportDpi;
-
-                    // 计算实际尺寸（1/100英寸）
-                    int imageWidth = (int)Math.Round(firstImage.Width / dpi * 100);
-                    int imageHeight = (int)Math.Round(firstImage.Height / dpi * 100);
-
-                    // 设置纸张尺寸和方向
-                    // PaperSize的定义：第一个参数是纵向时的宽度，第二个参数是纵向时的高度
-                    // Landscape=True 会将纸张旋转90度
-                    bool isLandscape = (firstImage.Width > firstImage.Height);
-                    int paperWidth, paperHeight;
-
-                    if (isLandscape)
+                    // 将 System.Drawing.Image 转换为 SKBitmap
+                    using (var memoryStream = new MemoryStream())
                     {
-                        // 横向：PaperSize用短边x长边（纵向定义），然后旋转
-                        paperWidth = imageHeight;  // 短边
-                        paperHeight = imageWidth;  // 长边
+                        image.Save(memoryStream, ImageFormat.Png);
+                        memoryStream.Position = 0;
+
+                        using (var skBitmap = SKBitmap.Decode(memoryStream))
+                        {
+                            // 创建页面（尺寸单位：点）
+                            using (var canvas = document.BeginPage(pageWidth, pageHeight))
+                            {
+                                // 绘制图片，填满整个页面
+                                var destRect = new SKRect(0, 0, pageWidth, pageHeight);
+                                canvas.DrawBitmap(skBitmap, destRect);
+                            }
+                            document.EndPage();
+                        }
                     }
-                    else
-                    {
-                        // 纵向：直接使用实际尺寸
-                        paperWidth = imageWidth;
-                        paperHeight = imageHeight;
-                    }
-
-                    var paperSize = new PaperSize("PPTSlide", paperWidth, paperHeight);
-                    printDocument.DefaultPageSettings.PaperSize = paperSize;
-                    printDocument.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
-                    printDocument.DefaultPageSettings.Landscape = isLandscape;
-
-                    System.Diagnostics.Debug.WriteLine($"默认页面设置（第一页）:");
-                    System.Diagnostics.Debug.WriteLine($"  图片尺寸: {firstImage.Width}px x {firstImage.Height}px @ {dpi} DPI");
-                    System.Diagnostics.Debug.WriteLine($"  实际尺寸: {imageWidth/100.0}\" x {imageHeight/100.0}\"");
-                    System.Diagnostics.Debug.WriteLine($"  PaperSize: {paperWidth/100.0}\" x {paperHeight/100.0}\"");
-                    System.Diagnostics.Debug.WriteLine($"  Landscape: {isLandscape}");
                 }
 
-                // 绑定事件 - QueryPageSettings在PrintPage之前调用（从第二页开始）
-                printDocument.QueryPageSettings += PrintDocument_QueryPageSettings;
-                printDocument.PrintPage += PrintDocument_PrintPage;
-
-                try
-                {
-                    printDocument.Print();
-                    System.Diagnostics.Debug.WriteLine($"========== PDF打印完成 ==========");
-                }
-                catch (Exception ex)
-                {
-                    throw new InvalidOperationException($"PDF打印失败: {ex.Message}. 请确保已安装Microsoft Print to PDF驱动程序。", ex);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 查询页面设置事件 - 在每页打印前调用（从第二页开始）
-        /// </summary>
-        private void PrintDocument_QueryPageSettings(object sender, QueryPageSettingsEventArgs e)
-        {
-            // currentPageIndex在PrintPage中递增，所以这里看到的是下一页的索引
-            int nextPageIndex = currentPageIndex;
-
-            if (nextPageIndex < imagesToPrint.Count)
-            {
-                var image = imagesToPrint[nextPageIndex];
-                double dpi = settings.ExportDpi;
-
-                // 计算实际尺寸（1/100英寸）
-                int imageWidth = (int)Math.Round(image.Width / dpi * 100);
-                int imageHeight = (int)Math.Round(image.Height / dpi * 100);
-
-                // 设置纸张尺寸和方向
-                // PaperSize的定义：第一个参数是纵向时的宽度，第二个参数是纵向时的高度
-                bool isLandscape = (image.Width > image.Height);
-                int paperWidth, paperHeight;
-
-                if (isLandscape)
-                {
-                    // 横向：PaperSize用短边x长边（纵向定义），然后旋转
-                    paperWidth = imageHeight;  // 短边
-                    paperHeight = imageWidth;  // 长边
-                }
-                else
-                {
-                    // 纵向：直接使用实际尺寸
-                    paperWidth = imageWidth;
-                    paperHeight = imageHeight;
-                }
-
-                e.PageSettings.PaperSize = new PaperSize("PPTSlide", paperWidth, paperHeight);
-                e.PageSettings.Margins = new Margins(0, 0, 0, 0);
-                e.PageSettings.Landscape = isLandscape;
-
-                System.Diagnostics.Debug.WriteLine($"QueryPageSettings 页面 {nextPageIndex + 1}:");
-                System.Diagnostics.Debug.WriteLine($"  图片尺寸: {image.Width}px x {image.Height}px @ {dpi} DPI");
-                System.Diagnostics.Debug.WriteLine($"  实际尺寸: {imageWidth/100.0}\" x {imageHeight/100.0}\"");
-                System.Diagnostics.Debug.WriteLine($"  PaperSize: {paperWidth/100.0}\" x {paperHeight/100.0}\"");
-                System.Diagnostics.Debug.WriteLine($"  Landscape: {isLandscape}");
-            }
-        }
-
-        /// <summary>
-        /// 打印页面事件处理
-        /// </summary>
-        private void PrintDocument_PrintPage(object sender, PrintPageEventArgs e)
-        {
-            if (currentPageIndex < imagesToPrint.Count)
-            {
-                var image = imagesToPrint[currentPageIndex];
-                var graphics = e.Graphics;
-
-                // 设置高质量渲染模式
-                graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
-                graphics.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-
-                // 获取页面尺寸（单位是1/100英寸）
-                // Graphics的绘制坐标也是1/100英寸，直接使用PageBounds即可
-                var pageBoundsWidth = e.PageBounds.Width;
-                var pageBoundsHeight = e.PageBounds.Height;
-
-                System.Diagnostics.Debug.WriteLine($"PrintPage 页面 {currentPageIndex + 1}:");
-                System.Diagnostics.Debug.WriteLine($"  PageBounds={pageBoundsWidth}x{pageBoundsHeight} (1/100英寸)");
-                System.Diagnostics.Debug.WriteLine($"  图片尺寸={image.Width}x{image.Height} (像素)");
-                System.Diagnostics.Debug.WriteLine($"  Graphics.PageUnit={graphics.PageUnit}");
-
-                // 直接使用PageBounds绘制，填满整个页面
-                // DrawImage的宽高参数单位和Graphics.PageUnit一致（通常是1/100英寸）
-                graphics.DrawImage(image, 0, 0, pageBoundsWidth, pageBoundsHeight);
-
-                currentPageIndex++;
-
-                // 检查是否还有更多页面
-                e.HasMorePages = currentPageIndex < imagesToPrint.Count;
-            }
-            else
-            {
-                e.HasMorePages = false;
-            }
-        }
-
-        /// <summary>
-        /// 清理图片资源
-        /// </summary>
-        private void ClearImages()
-        {
-            if (imagesToPrint != null)
-            {
-                foreach (var image in imagesToPrint)
-                {
-                    image?.Dispose();
-                }
-                imagesToPrint.Clear();
+                // 关闭文档
+                document.Close();
             }
         }
 
@@ -351,14 +212,27 @@ namespace PowerPointAddIn1
 
                 System.Diagnostics.Debug.WriteLine($"  检测到内容边界: Left={contentBounds.Left}, Top={contentBounds.Top}, Width={contentBounds.Width}, Height={contentBounds.Height}");
 
+                // 边距需要根据DPI缩放，以保持相同的物理尺寸
+                const int baseDpi = 150;
+                double dpiScale = (double)settings.ExportDpi / baseDpi;
+
+                // 缩放边距
+                int scaledLeftMargin = (int)Math.Round(settings.LeftMargin * dpiScale);
+                int scaledRightMargin = (int)Math.Round(settings.RightMargin * dpiScale);
+                int scaledTopMargin = (int)Math.Round(settings.TopMargin * dpiScale);
+                int scaledBottomMargin = (int)Math.Round(settings.BottomMargin * dpiScale);
+
+                System.Diagnostics.Debug.WriteLine($"  边距缩放: DPI {settings.ExportDpi} / 基准 {baseDpi} = {dpiScale:F2}x");
+                System.Diagnostics.Debug.WriteLine($"  缩放后边距: L{scaledLeftMargin} R{scaledRightMargin} T{scaledTopMargin} B{scaledBottomMargin}");
+
                 // 应用边距
                 var cropRect = new Rectangle(
-                    Math.Max(0, contentBounds.Left - settings.LeftMargin),
-                    Math.Max(0, contentBounds.Top - settings.TopMargin),
-                    Math.Min(bitmap.Width - Math.Max(0, contentBounds.Left - settings.LeftMargin),
-                            contentBounds.Width + settings.LeftMargin + settings.RightMargin),
-                    Math.Min(bitmap.Height - Math.Max(0, contentBounds.Top - settings.TopMargin),
-                            contentBounds.Height + settings.TopMargin + settings.BottomMargin)
+                    Math.Max(0, contentBounds.Left - scaledLeftMargin),
+                    Math.Max(0, contentBounds.Top - scaledTopMargin),
+                    Math.Min(bitmap.Width - Math.Max(0, contentBounds.Left - scaledLeftMargin),
+                            contentBounds.Width + scaledLeftMargin + scaledRightMargin),
+                    Math.Min(bitmap.Height - Math.Max(0, contentBounds.Top - scaledTopMargin),
+                            contentBounds.Height + scaledTopMargin + scaledBottomMargin)
                 );
 
                 System.Diagnostics.Debug.WriteLine($"  应用边距后裁剪区域: {cropRect}");
@@ -372,11 +246,26 @@ namespace PowerPointAddIn1
         /// </summary>
         private System.Drawing.Image CropImageWithFixedMargins(System.Drawing.Image originalImage)
         {
+            // 边距需要根据DPI缩放，以保持相同的物理尺寸
+            // 假设边距是基于150 DPI设置的
+            const int baseDpi = 150;
+            double dpiScale = (double)settings.ExportDpi / baseDpi;
+
+            // 缩放边距
+            int scaledLeftMargin = (int)Math.Round(settings.LeftMargin * dpiScale);
+            int scaledRightMargin = (int)Math.Round(settings.RightMargin * dpiScale);
+            int scaledTopMargin = (int)Math.Round(settings.TopMargin * dpiScale);
+            int scaledBottomMargin = (int)Math.Round(settings.BottomMargin * dpiScale);
+
+            System.Diagnostics.Debug.WriteLine($"  边距缩放: DPI {settings.ExportDpi} / 基准 {baseDpi} = {dpiScale:F2}x");
+            System.Diagnostics.Debug.WriteLine($"  原始边距: L{settings.LeftMargin} R{settings.RightMargin} T{settings.TopMargin} B{settings.BottomMargin}");
+            System.Diagnostics.Debug.WriteLine($"  缩放后边距: L{scaledLeftMargin} R{scaledRightMargin} T{scaledTopMargin} B{scaledBottomMargin}");
+
             var cropRect = new Rectangle(
-                settings.LeftMargin,
-                settings.TopMargin,
-                originalImage.Width - settings.LeftMargin - settings.RightMargin,
-                originalImage.Height - settings.TopMargin - settings.BottomMargin
+                scaledLeftMargin,
+                scaledTopMargin,
+                originalImage.Width - scaledLeftMargin - scaledRightMargin,
+                originalImage.Height - scaledTopMargin - scaledBottomMargin
             );
 
             using (var bitmap = new Bitmap(originalImage))
