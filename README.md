@@ -14,11 +14,11 @@ FreeCut是一个PowerPoint插件，专为学术论文写作设计。它可以选
 - ✅ **批量处理**: 一次性处理多个页面
 - ✅ **设置持久化**: 自动保存用户偏好配置
 
-## 🚀 当前版本：VSTO COM Add-in（推荐）
+## 🚀 当前版本
 
 **✅ 专业的PowerPoint插件解决方案！**
 
-我们基于VSTO（Visual Studio Tools for Office）技术开发了功能完整的PowerPoint COM Add-in，具有以下特性：
+\基于VSTO（Visual Studio Tools for Office）技术开发了功能完整的PowerPoint COM Add-in，具有以下特性：
 
 ### 技术优势
 
@@ -64,18 +64,9 @@ FreeCut是一个PowerPoint插件，专为学术论文写作设计。它可以选
 
 ## 📥 安装和构建
 
-### 快速安装（推荐）
+### 快速安装
 
-#### 方法一：使用安装脚本（最简单）⭐
-
-1. 在 Visual Studio 中打开并构建项目（Release 配置）
-2. 双击运行 `Install-FreeCut.bat` 或 `Install-FreeCut.ps1`
-3. 选择"安装插件"，等待安装完成
-4. 重启 PowerPoint，在 Ribbon 中查找"FreeCut"标签页
-
-**详细安装指南**: 📖 查看 [INSTALL.md](INSTALL.md) 获取完整的安装、卸载和故障排除指南
-
-#### 方法二：Visual Studio 调试模式
+#### 方法一：Visual Studio 调试模式
 
 1. 在 Visual Studio 中打开项目
 2. 按 `F5` 启动调试
@@ -415,23 +406,3 @@ FreeCut/ (VSTO PowerPoint插件)
 ## 📄 许可证
 
 本软件遵循MIT许可证，允许自由使用、修改和分发。
-
----
-
-## 💡 开发者说明
-
-### 核心架构特点
-
-1. **COM互操作**: 使用dynamic类型简化PowerPoint对象模型交互
-2. **异步处理**: 避免UI阻塞，提供流畅的用户体验
-3. **错误恢复**: 完善的异常处理和用户友好的错误提示
-4. **模块化设计**: 清晰的职责分离，便于维护和扩展
-
-### 性能优化
-
-- 延迟加载UI组件
-- 临时文件自动清理
-- 内存使用优化
-- 大文件处理优化
-
-**🎉 FreeCut VSTO插件 - 专业的PowerPoint自动裁剪解决方案！🎉**
