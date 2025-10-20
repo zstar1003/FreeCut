@@ -53,7 +53,7 @@ namespace PowerPointAddIn1
         /// <summary>
         /// 导出DPI
         /// </summary>
-        public int ExportDpi { get; set; } = 600;
+        public int ExportDpi { get; set; } = 150;
 
         /// <summary>
         /// 是否保持宽高比
@@ -133,7 +133,7 @@ namespace PowerPointAddIn1
             RightMargin = 10;
             DetectionTolerance = 5;
             PdfQuality = 100;
-            ExportDpi = 600;
+            ExportDpi = 150;
             PreserveAspectRatio = true;
             BackgroundMode = BackgroundDetectionMode.AutoDetect;
             CustomBackgroundColor = 0xFFFFFFFF;
