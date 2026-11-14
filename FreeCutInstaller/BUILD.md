@@ -27,29 +27,19 @@
 E:\code\FreeCut\FreeCutInstaller\bin\Release\FreeCutInstaller.exe
 ```
 
-**完成！** 这个 EXE 文件就是安装程序，可以分发给用户。
+该 EXE 不是独立安装包，必须与下面列出的插件构建输出一起分发。
 
 ---
 
-## 方法 2: 使用构建脚本（如果 Visual Studio 已安装）
+## 方法 2: 使用 Developer Command Prompt for Visual Studio
 
-### 步骤 1: 打开命令提示符
-
-在开始菜单搜索"Developer Command Prompt for VS"并打开
-
-### 步骤 2: 运行构建脚本
+在仓库根目录运行：
 
 ```cmd
-cd E:\code\FreeCut
-build_installer.bat
+msbuild FreeCutInstaller\FreeCutInstaller.csproj /p:Configuration=Release /t:Rebuild
 ```
 
-### 步骤 3: 获取 EXE 文件
-
-生成的 EXE 会自动复制到项目根目录：
-```
-E:\code\FreeCut\FreeCutInstaller.exe
-```
+输出位于 `FreeCutInstaller\bin\Release\FreeCutInstaller.exe`。
 
 ---
 
@@ -67,6 +57,7 @@ FreeCut-Release/
         └── bin/
             └── Release/
                 ├── PowerPointAddIn1.dll          # 主插件
+                ├── PowerPointAddIn1.vsto          # 部署清单（必需）
                 ├── PowerPointAddIn1.dll.manifest
                 ├── SkiaSharp.dll                 # 依赖库
                 ├── System.Buffers.dll
@@ -190,10 +181,15 @@ pause
 
 ## 📖 相关文档
 
-- **安装指南**: [INSTALL.md](../INSTALL.md)
-- **快速开始**: [QUICKSTART.md](../QUICKSTART.md)
+- **加载故障排查**: [TROUBLESHOOTING.md](../TROUBLESHOOTING.md)
 - **项目说明**: [README.md](../README.md)
 
 ---
 
 **现在就在 Visual Studio 中打开项目，3 分钟生成 EXE！** 🎉
+
+## 自动化回归检查
+
+`.github/workflows/installer.yml` 在 Windows 上编译安装器，并运行 `tests/InstallPackageTests.cs`：覆盖缺失/空文件、不同工作目录、相同路径重装和覆盖复制。它不运行 PowerPoint，也不验证 Office 的加载/证书信任。
+
+发布前仍需在 Windows + PowerPoint 手动验证：缺少 VSTO 时停止且不修改文件/注册表；分别删除两种清单时停止；完整包安装后实际出现标签页；关闭 PowerPoint 后重装与卸载；32/64 位 Office 支持范围。只有人工验证后才发布新的 ZIP。

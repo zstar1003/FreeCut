@@ -1,0 +1,22 @@
+name: Installer regression checks
+on:
+  pull_request:
+  push:
+    branches: [master]
+permissions:
+  contents: read
+jobs:
+  installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: microsoft/setup-msbuild@v2
+      - name: Build installer
+        run: msbuild FreeCutInstaller/FreeCutInstaller.csproj /p:Configuration=Release /t:Rebuild
+      - name: Run package regression tests
+        shell: powershell
+        run: |
+          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /out:InstallerTests.exe "FreeCutInstaller\InstallPackage.cs" "FreeCutInstaller\tests\InstallPackageTests.cs"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & .\InstallerTests.exe
+          exit $LASTEXITCODE

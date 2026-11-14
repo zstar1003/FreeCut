@@ -8,9 +8,7 @@ namespace FreeCutInstaller
 {
     public partial class InstallerForm : Form
     {
-        private const string PLUGIN_NAME = "FreeCut";
         private const string INSTALL_PATH = @"C:\FreeCut";
-        private const string DLL_NAME = "PowerPointAddIn1.dll";
 
         private TextBox statusTextBox;
 
@@ -103,38 +101,27 @@ namespace FreeCutInstaller
                 LogMessage("检查 VSTO Runtime...");
                 if (!CheckVSTORuntime())
                 {
-                    LogMessage("警告: 未检测到 VSTO Runtime");
-                    LogMessage("");
-                    var result = MessageBox.Show(
+                    LogMessage("安装已停止: 未检测到 VSTO Runtime，尚未复制或注册插件。");
+                    MessageBox.Show(
                         "未检测到 Microsoft Visual Studio Tools for Office Runtime。\n\n" +
-                        "这是运行 FreeCut 插件所必需的组件。\n\n" +
-                        "是否继续安装？（安装后需要手动安装 VSTO Runtime）",
-                        "缺少必需组件",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Warning);
-
-                    if (result == DialogResult.No)
-                    {
-                        LogMessage("安装已取消");
-                        return;
-                    }
+                        "请先安装该组件，再重新运行安装器：\n" +
+                        "https://aka.ms/vs/17/release/vs_vsto.exe",
+                        "缺少必需组件", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
                 }
                 else
                 {
                     LogMessage("VSTO Runtime 已安装");
                 }
 
-                // 检查是否有PowerPointAddIn1.dll文件
-                string dllPath = FindFreeCutDll();
-                if (string.IsNullOrEmpty(dllPath))
+                // 必须在修改安装目录/注册表之前检查完整的部署包。
+                string sourceDir = InstallPackage.FindSourceDirectory(AppDomain.CurrentDomain.BaseDirectory);
+                if (sourceDir == null)
                 {
-                    LogMessage("错误: 找不到PowerPointAddIn1.dll文件");
-                    LogMessage("请确保PowerPointAddIn1.dll与此安装器在同一目录");
-                    MessageBox.Show("找不到PowerPointAddIn1.dll文件！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
+                    throw new FileNotFoundException("找不到 PowerPointAddIn1.dll，请完整解压安装包后再运行安装器。");
                 }
-
-                LogMessage("找到插件文件: " + dllPath);
+                InstallPackage.Validate(sourceDir);
+                LogMessage("找到完整插件包: " + sourceDir);
 
                 // 创建安装目录
                 LogMessage("创建安装目录...");
@@ -145,14 +132,13 @@ namespace FreeCutInstaller
 
                 // 复制文件
                 LogMessage("复制插件文件...");
-                string sourceDir = Path.GetDirectoryName(dllPath);
 
                 // 复制所有 DLL 文件
                 foreach (string file in Directory.GetFiles(sourceDir, "*.dll"))
                 {
                     string fileName = Path.GetFileName(file);
                     string destFile = Path.Combine(INSTALL_PATH, fileName);
-                    File.Copy(file, destFile, true);
+                    InstallPackage.CopyFile(file, destFile);
                     LogMessage("已复制: " + fileName);
                 }
 
@@ -161,7 +147,7 @@ namespace FreeCutInstaller
                 {
                     string fileName = Path.GetFileName(file);
                     string destFile = Path.Combine(INSTALL_PATH, fileName);
-                    File.Copy(file, destFile, true);
+                    InstallPackage.CopyFile(file, destFile);
                     LogMessage("已复制: " + fileName);
                 }
 
@@ -169,7 +155,7 @@ namespace FreeCutInstaller
                 {
                     string fileName = Path.GetFileName(file);
                     string destFile = Path.Combine(INSTALL_PATH, fileName);
-                    File.Copy(file, destFile, true);
+                    InstallPackage.CopyFile(file, destFile);
                     LogMessage("已复制: " + fileName);
                 }
 
@@ -178,20 +164,21 @@ namespace FreeCutInstaller
                 {
                     string fileName = Path.GetFileName(file);
                     string destFile = Path.Combine(INSTALL_PATH, fileName);
-                    File.Copy(file, destFile, true);
+                    InstallPackage.CopyFile(file, destFile);
                     LogMessage("已复制: " + fileName);
                 }
 
                 // 注册插件
                 LogMessage("注册插件到PowerPoint...");
+                InstallPackage.Validate(INSTALL_PATH);
                 RegisterPlugin();
 
                 LogMessage("");
-                LogMessage("安装完成！");
+                LogMessage("文件复制和注册完成；加载结果请在 PowerPoint 中确认。");
                 LogMessage("");
                 LogMessage("请重启PowerPoint，然后查看Ribbon中的FreeCut标签页。");
 
-                string successMessage = "FreeCut插件安装成功！\n\n请重启PowerPoint查看FreeCut标签页。";
+                string successMessage = "FreeCut 插件文件复制和注册完成。\n\n请重启 PowerPoint 查看 FreeCut 标签页。\n若未出现，请参阅安装包的 TROUBLESHOOTING.md。";
 
                 MessageBox.Show(successMessage,
                     "安装成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -251,30 +238,6 @@ namespace FreeCutInstaller
             }
         }
 
-        private string FindFreeCutDll()
-        {
-            // 查找PowerPointAddIn1.dll文件
-            string[] searchPaths = {
-                "PowerPointAddIn1.dll",
-                @"FreeCutPPT\PowerPointAddIn1\bin\Debug\PowerPointAddIn1.dll",
-                @"FreeCutPPT\PowerPointAddIn1\bin\Release\PowerPointAddIn1.dll",
-                @"..\FreeCutPPT\PowerPointAddIn1\bin\Debug\PowerPointAddIn1.dll",
-                @"..\FreeCutPPT\PowerPointAddIn1\bin\Release\PowerPointAddIn1.dll",
-                @"bin\Debug\PowerPointAddIn1.dll",
-                @"bin\Release\PowerPointAddIn1.dll"
-            };
-
-            foreach (string path in searchPaths)
-            {
-                if (File.Exists(path))
-                {
-                    return Path.GetFullPath(path);
-                }
-            }
-
-            return null;
-        }
-
         private void RegisterPlugin()
         {
             // VSTO 插件使用 .vsto 文件进行部署
@@ -291,32 +254,39 @@ namespace FreeCutInstaller
 
         private bool CheckVSTORuntime()
         {
-            // 检查 VSTO Runtime 是否安装
-            // VSTO 2010 Runtime (v10.0) 注册表路径
-            try
+            // Explicit views avoid Wow6432Node redirection in the 32-bit installer.
+            RegistryView[] views = Environment.Is64BitOperatingSystem
+                ? new[] { RegistryView.Registry32, RegistryView.Registry64 }
+                : new[] { RegistryView.Registry32 };
+            foreach (RegistryView view in views)
             {
-                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\VSTO Runtime Setup\v4R"))
+                try
                 {
-                    if (key != null)
+                    using (RegistryKey machine = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view))
                     {
-                        return true;
+                        // v4R: redistributable; v4: runtime installed by Office.
+                        foreach (string runtime in new[] { "v4R", "v4" })
+                        {
+                            using (RegistryKey key = machine.OpenSubKey(@"SOFTWARE\Microsoft\VSTO Runtime Setup\" + runtime))
+                            {
+                                Version version;
+                                Version minimum = runtime == "v4R" ? new Version(10, 0, 30319) : new Version(10, 0, 21022);
+                                if (key != null && Version.TryParse(key.GetValue("Version") as string, out version)
+                                    && version >= minimum)
+                                    return true;
+                            }
+                        }
                     }
                 }
-
-                // 也检查 32 位注册表路径（在 64 位系统上）
-                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Wow6432Node\Microsoft\VSTO Runtime Setup\v4R"))
+                catch (System.Security.SecurityException ex)
                 {
-                    if (key != null)
-                    {
-                        return true;
-                    }
+                    LogMessage("无法读取 VSTO Runtime 注册表: " + ex.Message);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    LogMessage("无法读取 VSTO Runtime 注册表: " + ex.Message);
                 }
             }
-            catch
-            {
-                // 忽略错误
-            }
-
             return false;
         }
 
@@ -337,7 +307,8 @@ namespace FreeCutInstaller
             statusTextBox.AppendText(message + "\r\n");
             statusTextBox.SelectionStart = statusTextBox.Text.Length;
             statusTextBox.ScrollToCaret();
-            Application.DoEvents();
+            // Do not pump input here: install/uninstall must not re-enter mid-copy.
+            statusTextBox.Refresh();
         }
     }
 }

@@ -1,6 +1,14 @@
 # FreeCut 安装器更新说明
 
-## 🔧 已修复的问题
+## 安装前置检查修复
+
+- 缺少 VSTO Runtime 时停止安装，不再允许忽略必需依赖后显示成功。
+- 在复制和注册前检查 DLL、应用清单及部署清单存在且非空；复制后再次检查。
+- 相对于安装器自身目录查找插件，避免从快捷方式启动时找不到文件。
+- 安装器状态更新不再处理输入事件，避免安装/卸载过程被重复点击打断。
+- “文件复制和注册完成”不代表已在 PowerPoint 中验证加载。Issue #1 尚无环境/错误详情，这些是确认的安装器缺陷修复，而非对该用户根因的确认。
+
+## 🔧 早期修复说明
 
 之前的安装器存在以下问题，导致插件显示"未加载"：
 
@@ -56,7 +64,7 @@ Manifest = C:\FreeCut\PowerPointAddIn1.vsto|vstolocal
 
 或运行构建脚本：
 ```cmd
-build_installer.bat
+msbuild FreeCutInstaller\FreeCutInstaller.csproj /p:Configuration=Release /t:Rebuild
 ```
 
 ### 步骤 2: 分发给用户
@@ -73,7 +81,6 @@ FreeCut-安装包/
 │               ├── PowerPointAddIn1.dll.manifest
 │               ├── PowerPointAddIn1.vsto
 │               └── ... (所有 DLL)
-├── FixFreeCut.bat                     # 修复工具（可选）
 ├── TROUBLESHOOTING.md                 # 故障排除指南
 └── README.md                          # 使用说明
 ```
@@ -91,22 +98,7 @@ FreeCut-安装包/
 
 ## 🛠️ 如果仍然出现"未加载"问题
 
-### 快速修复
-
-运行 `FixFreeCut.bat` 修复脚本，它会：
-1. 清除 Office 缓存
-2. 重置注册表配置
-3. 重新注册插件
-4. 检查必需文件
-5. 验证 VSTO Runtime
-
-### 详细排查
-
-查看 `TROUBLESHOOTING.md` 文档，包含：
-- 7 个详细的故障排除步骤
-- 完整的检查清单
-- 常见错误和解决方案
-- 如何启用 VSTO 日志
+参阅 [TROUBLESHOOTING.md](../TROUBLESHOOTING.md)，先收集安装器状态、Office 版本与加载错误。仓库没有自动修复脚本，不要盲目清除 Office 缓存或绕过安全策略。
 
 ---
 
@@ -133,7 +125,7 @@ Manifest = [绝对路径]\PowerPointAddIn1.vsto|vstolocal
 ```
 
 **关键点：**
-- 必须是绝对路径（不能是 file:/// URL）
+- 本安装器使用绝对文件路径
 - 必须指向 `.vsto` 文件（不是 `.dll.manifest`）
 - 必须以 `|vstolocal` 结尾
 
@@ -173,9 +165,8 @@ dir C:\FreeCut
 - ✅ 使用正确的 VSTO 清单文件
 - ✅ 正确的注册表配置
 - ✅ 自动检查依赖项
-- ✅ 提供修复工具和详细文档
+- ✅ 提供加载排查文档
 
 如果用户仍然遇到问题，请让他们：
-1. 运行 `FixFreeCut.bat`
-2. 查看 `TROUBLESHOOTING.md`
-3. 提供诊断信息
+1. 查看 [TROUBLESHOOTING.md](../TROUBLESHOOTING.md)
+2. 提供诊断信息
