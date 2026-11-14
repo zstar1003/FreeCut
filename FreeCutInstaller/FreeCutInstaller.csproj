@@ -50,6 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <Compile Include="InstallPackage.cs" />
     <Compile Include="InstallerForm.cs">
       <SubType>Form</SubType>
     </Compile>

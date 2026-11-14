@@ -11,6 +11,8 @@ FreeCut是一个PowerPoint插件，专为学术论文写作设计。它可以选
 
 windows：https://github.com/zstar1003/FreeCut/releases/download/v1.0.0/FreeCut_setup.zip
 
+安装后没有标签页？请参阅 [加载故障排查](TROUBLESHOOTING.md)。源码中的安装器修复不会自动更新上面的 v1.0.0 安装包。
+
 ## ✨ 主要功能
 
 - ✅ **智能页面选择**: 支持单页和多页选择导出
