@@ -254,32 +254,39 @@ namespace FreeCutInstaller
 
         private bool CheckVSTORuntime()
         {
-            // 检查 VSTO Runtime 是否安装
-            // VSTO 2010 Runtime (v10.0) 注册表路径
-            try
+            // Explicit views avoid Wow6432Node redirection in the 32-bit installer.
+            RegistryView[] views = Environment.Is64BitOperatingSystem
+                ? new[] { RegistryView.Registry32, RegistryView.Registry64 }
+                : new[] { RegistryView.Registry32 };
+            foreach (RegistryView view in views)
             {
-                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\VSTO Runtime Setup\v4R"))
+                try
                 {
-                    if (key != null)
+                    using (RegistryKey machine = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view))
                     {
-                        return true;
+                        // v4R: redistributable; v4: runtime installed by Office.
+                        foreach (string runtime in new[] { "v4R", "v4" })
+                        {
+                            using (RegistryKey key = machine.OpenSubKey(@"SOFTWARE\Microsoft\VSTO Runtime Setup\" + runtime))
+                            {
+                                Version version;
+                                Version minimum = runtime == "v4R" ? new Version(10, 0, 30319) : new Version(10, 0, 21022);
+                                if (key != null && Version.TryParse(key.GetValue("Version") as string, out version)
+                                    && version >= minimum)
+                                    return true;
+                            }
+                        }
                     }
                 }
-
-                // 也检查 32 位注册表路径（在 64 位系统上）
-                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Wow6432Node\Microsoft\VSTO Runtime Setup\v4R"))
+                catch (System.Security.SecurityException ex)
                 {
-                    if (key != null)
-                    {
-                        return true;
-                    }
+                    LogMessage("无法读取 VSTO Runtime 注册表: " + ex.Message);
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    LogMessage("无法读取 VSTO Runtime 注册表: " + ex.Message);
                 }
             }
-            catch
-            {
-                // 忽略错误
-            }
-
             return false;
         }
 
