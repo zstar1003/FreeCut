@@ -10,7 +10,99 @@
 
 ## 🔧 早期修复说明
 
-之前的安装器存在以下问题，导致插件显示"未加…1122 tokens truncated…f细节
+之前的安装器存在以下问题，导致插件显示"未加载"：
+
+### 问题 1: 错误的清单文件
+- ❌ **旧方式**: 手动创建简化的 `.dll.manifest` 文件
+- ✅ **新方式**: 使用 Visual Studio 自动生成的完整清单文件
+
+### 问题 2: 错误的注册表配置
+- ❌ **旧方式**: 注册表指向 `PowerPointAddIn1.dll.manifest`
+- ✅ **新方式**: 注册表指向 `PowerPointAddIn1.vsto`（VSTO 部署清单）
+
+### 问题 3: 缺少 VSTO Runtime 检查
+- ❌ **旧方式**: 没有检查必需的运行时组件
+- ✅ **新方式**: 安装前检查并提示用户安装 VSTO Runtime
+
+---
+
+## 📦 新的安装器功能
+
+### 1. 自动检查依赖项
+- 检测 VSTO Runtime 是否已安装
+- 如果缺失，提示用户下载链接
+
+### 2. 正确的文件复制
+安装器现在会复制所有必需文件：
+```
+C:\FreeCut\
+├── PowerPointAddIn1.dll           # 主插件
+├── PowerPointAddIn1.dll.manifest  # 应用程序清单（VS生成）
+├── PowerPointAddIn1.vsto          # 部署清单（关键！）
+├── SkiaSharp.dll                  # 依赖库
+├── System.*.dll                   # 其他依赖
+└── libSkiaSharp.dll               # 原生库
+```
+
+### 3. 正确的注册表配置
+```
+Manifest = C:\FreeCut\PowerPointAddIn1.vsto|vstolocal
+```
+注意末尾的 `|vstolocal` 标志。
+
+---
+
+## 🔄 如何使用新安装器
+
+### 步骤 1: 重新构建安装器
+
+在 Visual Studio 中：
+1. 打开 `FreeCutInstaller\FreeCutInstaller.csproj`
+2. 选择 `Release` 配置
+3. 按 `Ctrl+Shift+B` 构建
+4. 生成的 EXE 位于：`FreeCutInstaller\bin\Release\FreeCutInstaller.exe`
+
+或运行构建脚本：
+```cmd
+msbuild FreeCutInstaller\FreeCutInstaller.csproj /p:Configuration=Release /t:Rebuild
+```
+
+### 步骤 2: 分发给用户
+
+打包以下内容：
+```
+FreeCut-安装包/
+├── FreeCutInstaller.exe               # 新的安装器
+├── FreeCutPPT/
+│   └── PowerPointAddIn1/
+│       └── bin/
+│           └── Release/
+│               ├── PowerPointAddIn1.dll
+│               ├── PowerPointAddIn1.dll.manifest
+│               ├── PowerPointAddIn1.vsto
+│               └── ... (所有 DLL)
+├── TROUBLESHOOTING.md                 # 故障排除指南
+└── README.md                          # 使用说明
+```
+
+### 步骤 3: 用户安装流程
+
+1. **运行安装器**: 双击 `FreeCutInstaller.exe`
+2. **检查依赖**: 安装器会自动检查 VSTO Runtime
+3. **如果缺失**: 提示用户下载并安装 VSTO Runtime
+   - 下载地址：https://aka.ms/vs/17/release/vs_vsto.exe
+4. **完成安装**: 点击"安装插件"
+5. **重启 PowerPoint**: 查看 FreeCut 标签页
+
+---
+
+## 🛠️ 如果仍然出现"未加载"问题
+
+参阅 [TROUBLESHOOTING.md](../TROUBLESHOOTING.md)，先收集安装器状态、Office 版本与加载错误。仓库没有自动修复脚本，不要盲目清除 Office 缓存或绕过安全策略。
+
+---
+
+## 📝 技术细节
 
 ### VSTO 部署模型
 
