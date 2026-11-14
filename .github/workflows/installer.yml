@@ -16,7 +16,7 @@ jobs:
       - name: Run package regression tests
         shell: powershell
         run: |
-          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /out:InstallerTests.exe FreeCutInstaller/InstallPackage.cs FreeCutInstaller/tests/InstallPackageTests.cs
+          & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /out:InstallerTests.exe "FreeCutInstaller\InstallPackage.cs" "FreeCutInstaller\tests\InstallPackageTests.cs"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & .\InstallerTests.exe
           exit $LASTEXITCODE
